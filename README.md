@@ -1,5 +1,5 @@
 
-WooCommerce plugin 1.0
+WooCommerce plugin 1.1
 ==========
 
 Mondido Payments plugin for WooCommerce  
