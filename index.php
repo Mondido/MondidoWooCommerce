@@ -1,12 +1,12 @@
 <?php
 
 /*
-  Plugin Name: Mondido (Hosted Windows)
+  Plugin Name: Mondido Payments
   Plugin URI: https://mondido.com/
-  Description: Mondido Payment gateway for WooCommerce
-  Version: 1.0
+  Description: Mondido Payment plugin for WooCommerce
+  Version: 1.2
   Author: Mondido Payments
-  Author URI: https://mondido.com
+  Author URI: https://www.mondido.com
  */
 
 // Actions 
@@ -63,7 +63,7 @@ function woocommerce_mondido_init() {
             $this->description = __('Pay securely by Credit or Debit card through Mondido.', 'mondido');
             $this->merchant_id = $this->settings['merchant_id'];
             $this->secret = $this->settings['secret'];
-            $this->currency = $this->selected_currency; //$this->settings['currency'];
+            $this->currency = $this->selected_currency; //pick currency from shop
             $test = 'false';
             if($this->settings['test'] == 'yes'){
                 $test = 'true';
@@ -96,6 +96,10 @@ function woocommerce_mondido_init() {
             return $this->currency;
         }
 
+        public function get_test() {
+            return $this->test;
+        }
+
         /*
          * Initialise settings form fields
          */
@@ -115,12 +119,6 @@ function woocommerce_mondido_init() {
                     'title' => __('Secret', 'mondido'),
                     'type' => 'text',
                     'description' => __('Given secret code from Mondido', 'mondido'),
-                ),
-                'currency' => array(
-                    'title' => __('Currency', 'mondido'),
-                    'type' => 'text',
-                    'default' => 'SEK',
-                    'description' => __('currency for the payment', 'mondido'),
                 ),
                 'test' => array(
                     'title' => __('Test', 'mondido'),
@@ -193,7 +191,7 @@ function woocommerce_mondido_init() {
 				<div class="payment_buttons">
 					<input type="submit" class="button alt" id="submit_mondido_payment_form" value="' . __('Pay via Mondido', 'mondido') . '" /> <a class="button cancel" href="' . $order->get_cancel_order_url() . '">' . __('Cancel order &amp; restore cart', 'mondido') . '</a>
 				</div>
-            </form>';
+            </form><script>document.getElementById("mondido_payment_form").submit();</script> ';
         }
 
         /*
@@ -266,10 +264,14 @@ function woocommerce_mondido_init() {
         $secret = trim($mondido->get_secret());
         $customer_id = '';
         $currency = strtolower($mondido->get_currency());
+        $test = '';
+        if((string)$mondido->get_test() == 'true'){
+            $test = 'test';
+        }
         if ($callback) {
             $str = "" . $merchant_id . "" . $order_id . "" . $customer_id . "" . $amount . "" . $currency . "" . strtolower($status) . "" . $secret . "";
         } else {
-            $str = "" . $merchant_id . "" . $order_id . "" . $customer_id . "" . $amount . "" . $secret . "";
+            $str = "" . $merchant_id . "" . $order_id . "" . $customer_id . "" . $amount . "" . $currency . "" . $test. "" . $secret . "";
         }
         return MD5($str);
     }
