@@ -11,13 +11,14 @@
 
 // Actions 
 add_action('plugins_loaded', 'woocommerce_mondido_init', 0);
-add_action('init', array('WC_Gateway_Mondido', 'check_mondido_response',));
-add_action('valid-mondido-callcack', array('WC_Gateway_Mondido', 'successful_request',));
+add_action('init', array('WC_Gateway_Mondido', 'check_mondido_response'));
+add_action('valid-mondido-callcack', array('WC_Gateway_Mondido', 'successful_request'));
 
 function woocommerce_mondido_init() {
     if (!class_exists('WC_Payment_Gateway')) {
         return;
     }
+
 
     class WC_Gateway_Mondido extends WC_Payment_Gateway {
 
@@ -47,10 +48,10 @@ function woocommerce_mondido_init() {
 
 
             $this->id = 'mondido';
-            $this->medthod_title = 'Mondido';
-            $this->medthod_description = __('', 'mondido');
             $this->icon = WP_PLUGIN_URL . "/" . plugin_basename(dirname(__FILE__)) . '/mondido.png';
             $this->has_fields = false;
+            $this->method_title = 'Mondido';
+            $this->method_description = __('', 'mondido');
             $this->order_button_text = __('Proceed to Mondido', 'woocommerce');
             $this->liveurl = 'https://pay.mondido.com/v1/form';
 
@@ -168,7 +169,6 @@ function woocommerce_mondido_init() {
             $currency = trim($this->currency);
             $customer_id = '';
             $hash = generate_mondido_hash($order_id);
-            $mondido_args = array();
             $mondido_args = array(
                 'amount' => $amount,
                 'merchant_id' => $merchant_id,
@@ -191,7 +191,7 @@ function woocommerce_mondido_init() {
 				<div class="payment_buttons">
 					<input type="submit" class="button alt" id="submit_mondido_payment_form" value="' . __('Pay via Mondido', 'mondido') . '" /> <a class="button cancel" href="' . $order->get_cancel_order_url() . '">' . __('Cancel order &amp; restore cart', 'mondido') . '</a>
 				</div>
-            </form><script>document.getElementById("mondido_payment_form").submit();</script> ';
+            </form><script>document.getElementById("mondido_payment_form").submit();</script>';
         }
 
         /*
@@ -201,6 +201,7 @@ function woocommerce_mondido_init() {
         public function process_payment($order_id) {
             global $woocommerce;
             $order = new WC_Order($order_id);
+
             return array(
                 'result' => 'success',
                 'redirect' => $order->get_checkout_payment_url(true)
@@ -220,8 +221,18 @@ function woocommerce_mondido_init() {
          * Check for valid mondido server callback
          */
 
-        public function check_mondido_response() {
+        public static function check_mondido_response() {
             $_GET = stripslashes_deep($_GET);
+            $expected_fields = array(
+                "hash",
+                "payment_ref",
+                "transaction_id"
+            );
+
+            foreach($expected_fields as $field){
+                if(!isset($_GET[$field])) return;
+            }
+
             do_action("valid-mondido-callcack", $_GET);
         }
 
@@ -229,50 +240,95 @@ function woocommerce_mondido_init() {
          * Successful Payment
          */
 
-        public function successful_request($posted) {
+        public static function successful_request($posted) {
             global $woocommerce;
             // If payment was success
+
             if ($posted['status'] == 'approved') {
                 $order = new WC_Order((int) $posted["payment_ref"]);
-                $order->update_status('on-hold', __('Awaiting cheque payment', 'woocommerce'));
 
-                // Check so payment is correct
-                $hash = generate_mondido_hash((int) $posted["payment_ref"], true, $posted["status"]);
+                // if order not exists, die()
+                if($order->post == null) return;
+
+                // if order is not pending, die()
+                if($order->post_status != "wc-pending"){
+                    $message = __(
+                        sprintf("Invalid Callback for Order #%s."
+                            . " Status is not pending."
+                            . " Customer may have reloaded the page or pressed F5.",
+                            $posted["payment_ref"]
+                        ),
+                        'woocommerce'
+                    );
+
+                    $log = new WC_Logger();
+                    $log->add( 'mondido', $message );
+                    return;
+                }
+
+                // Check whether payment is correct
+                $hash = generate_mondido_hash(
+                    (int) $posted["payment_ref"],
+                    true,
+                    $posted["status"]
+                );
+
                 if ($hash == $posted['hash']) {
-                    $order->add_order_note(__('Callback completed', 'mondido'));
-                    $order->add_order_note('transaction_id: ' . $posted['transaction_id']);
-                    $order->payment_complete();
+                    $order->add_order_note(
+                        __(
+                            sprintf("Success: Callback completed."
+                                . " Transaction ID #%s.",
+                                $posted['transaction_id']
+                            ),
+                            'woocommerce'
+                        )
+                    );
+
+                    // Payment Complete
+                    $order->payment_complete( $posted['transaction_id'] );
+
+                    // Remove cart
                     $woocommerce->cart->empty_cart();
+
                 } else {
-                    $order->add_order_note(__('Callback completed', 'mondido'));
-                    $order->add_order_note('transaction_id: ' . $posted['transaction_id']);
-                    $order->add_order_note(__('Hash not correct, fake payment?'));
+                    $order->update_status('failed');
+                    $order->add_order_note(
+                        __(
+                            sprintf( "Failure. Callback completed. "
+                                . "Transaction #%s."
+                                . " Incorrect hash -- fake payment?",
+
+                                $posted['transaction_id']
+                            ),
+                            'woocommerce'
+                        )
+                    );
                 }
             }
         }
     }
 
     /*
-     * Generate momondo hash
+     * Generate Mondido Hash
      */
 
     function generate_mondido_hash($order_id, $callback = false, $status = "") {
         $order = new WC_Order((int) $order_id);
         $mondido = new WC_Gateway_Mondido();
+
         $amount = number_format($order->order_total, 2, '.', '');
         $merchant_id = trim($mondido->get_merchant_id());
         $secret = trim($mondido->get_secret());
         $customer_id = '';
         $currency = strtolower($mondido->get_currency());
-        $test = '';
-        if((string)$mondido->get_test() == 'true'){
-            $test = 'test';
-        }
+        $test = ((string)$mondido->get_test() == 'true') ? 'test' : '';
+
         if ($callback) {
-            $str = "" . $merchant_id . "" . $order_id . "" . $customer_id . "" . $amount . "" . $currency . "" . strtolower($status) . "" . $secret . "";
+            $str = $merchant_id . $order_id . $customer_id . $amount . $currency . strtolower($status) . $secret;
         } else {
-            $str = "" . $merchant_id . "" . $order_id . "" . $customer_id . "" . $amount . "" . $currency . "" . $test. "" . $secret . "";
+            $str = $merchant_id . $order_id . $customer_id . $amount . $currency . $test . $secret;
         }
+
         return MD5($str);
     }
 
@@ -304,5 +360,3 @@ function woocommerce_mondido_init() {
         add_action('load-post.php', 'WC_Gateway_Mondido');
     }
 }
-
-?>
