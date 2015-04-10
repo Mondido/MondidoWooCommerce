@@ -276,15 +276,16 @@ function woocommerce_mondido_init() {
 
                     // Success Pending Page (Trustly)
                     if($posted["status"] == "pending"){
-                        $order->add_order_note(
-                            __(
-                                sprintf("Trustly redirect received."
-                                    . " Transaction ID #%s.",
-                                    $posted['transaction_id']
-                                ),
-                                'woocommerce'
-                            )
+                        $message = __(
+                            sprintf("Pending redirect received."
+                                . " Transaction ID #%s.",
+                                $posted['transaction_id']
+                            ),
+                            'woocommerce'
                         );
+
+                        $log = new WC_Logger();
+                        $log->add( 'mondido', $message );
                         return;
                     }
 
