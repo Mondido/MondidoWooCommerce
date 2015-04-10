@@ -244,27 +244,11 @@ function woocommerce_mondido_init() {
             global $woocommerce;
             // If payment was success
 
-            if ($posted['status'] == 'approved') {
+            if (in_array($posted['status'], array("approved","pending"))) {
                 $order = new WC_Order((int) $posted["payment_ref"]);
 
                 // if order not exists, die()
                 if($order->post == null) return;
-
-                // if order is not pending, die()
-                if($order->post_status != "wc-pending"){
-                    $message = __(
-                        sprintf("Invalid Callback for Order #%s."
-                            . " Status is not pending."
-                            . " Customer may have reloaded the page or pressed F5.",
-                            $posted["payment_ref"]
-                        ),
-                        'woocommerce'
-                    );
-
-                    $log = new WC_Logger();
-                    $log->add( 'mondido', $message );
-                    return;
-                }
 
                 // Check whether payment is correct
                 $hash = generate_mondido_hash(
@@ -274,6 +258,36 @@ function woocommerce_mondido_init() {
                 );
 
                 if ($hash == $posted['hash']) {
+                    // if order is not pending, die()
+                    if($order->post_status != "wc-pending"){
+                        $message = __(
+                            sprintf("Invalid Callback for Order #%s."
+                                . " Status is not pending."
+                                . " Customer may have reloaded the page or pressed F5.",
+                                $posted["payment_ref"]
+                            ),
+                            'woocommerce'
+                        );
+
+                        $log = new WC_Logger();
+                        $log->add( 'mondido', $message );
+                        return;
+                    }
+
+                    // Success Pending Page (Trustly)
+                    if($posted["status"] == "pending"){
+                        $order->add_order_note(
+                            __(
+                                sprintf("Trustly redirect received."
+                                    . " Transaction ID #%s.",
+                                    $posted['transaction_id']
+                                ),
+                                'woocommerce'
+                            )
+                        );
+                        return;
+                    }
+
                     $order->add_order_note(
                         __(
                             sprintf("Success: Callback completed."
