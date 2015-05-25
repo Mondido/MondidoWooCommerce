@@ -2,9 +2,9 @@
 
 /*
   Plugin Name: Mondido Payments
-  Plugin URI: https://mondido.com/
+  Plugin URI: https://www.mondido.com/
   Description: Mondido Payment plugin for WooCommerce
-  Version: 1.2
+  Version: 1.4
   Author: Mondido Payments
   Author URI: https://www.mondido.com
  */
@@ -161,9 +161,9 @@ function woocommerce_mondido_init() {
             global $woocommerce;
             $order = new WC_Order($order_id);
 
-            $cart = new WC_Cart();
-            $cart->get_cart_from_session();
-            $metadata = json_encode($cart);
+            //$cart = new WC_Cart();
+            //$cart->get_cart_from_session();
+            $metadata = '';
             $amount = number_format($order->order_total, 2, '.', '');
             $merchant_id = trim($this->merchant_id);
             $currency = trim($this->currency);

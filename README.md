@@ -1,6 +1,6 @@
 Mondido Payments 
 =======================
-WooCommerce plugin v1.3
+WooCommerce plugin v1.4
 
 1. Get your mondido account at: https://mondido.com  
 2. Click in the "Download ZIP" button in the right menu of this page  
@@ -15,6 +15,10 @@ WooCommerce plugin v1.3
 
 
 ## Changelog
+
+2015-05-25
+- Applied filter on metadata
+- Updated readme
 
 2015-02-07
 - Fixed multiple callback bug
