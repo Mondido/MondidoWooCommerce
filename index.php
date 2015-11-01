@@ -9,7 +9,7 @@
   Author URI: https://www.mondido.com
  */
 
-// Actions
+// Actions 
 add_action('plugins_loaded', 'woocommerce_mondido_init', 0);
 add_action('init', array('WC_Gateway_Mondido', 'check_mondido_response'));
 add_action('valid-mondido-callcack', array('WC_Gateway_Mondido', 'successful_request'));
@@ -24,6 +24,9 @@ function woocommerce_mondido_init() {
 
         public function __construct() {
 
+            $this->supports           = array(
+                'refunds'
+            );
             global $woocommerce;
             $this->selected_currency	= '';
             $this->plugin_version = "2.0";
@@ -177,6 +180,12 @@ function woocommerce_mondido_init() {
             }
         }
 
+        public function process_refund( $order_id, $amount = null ) {
+            // Do your refund here. Refund $amount for the order with ID $order_id
+            $ids = get_post_meta( $order_id, 'mondido-transaction-id' );
+            //refund $ids[0]
+            return false;
+        }
         /*
          * Generate Mondido button link
          */
@@ -220,15 +229,13 @@ function woocommerce_mondido_init() {
                 $c_item["vat"] = number_format($item['line_tax'], 2, '.', '');
                 $items_item["vat"] = number_format($item['line_tax'], 2, '.', '');
 
-                foreach($item["data"] as $data){
-                    $c_item["amount"] = $data->price;
-                    $items_item["amount"] = $data->price;
-                    $c_item["shipping_class"] = $data->shipping_class;
-                    $c_item["name"] = $data->post->post_title;
-                    $items_item["name"] = $data->post->post_title;
-                    $c_item["url"] = $data->post->guid;
+                $c_item["amount"] = $prod->price;
+                $items_item["amount"] = $prod->price;
+                $c_item["shipping_class"] = $prod->shipping_class;
+                $c_item["name"] = $prod->post->post_title;
+                $items_item["name"] = $prod->post->post_title;
+                $c_item["url"] = $prod->post->guid;
 
-                }
 
                 array_push($products,$c_item);
                 array_push($items,$items_item);
@@ -300,7 +307,7 @@ function woocommerce_mondido_init() {
                 'metadata' => $metadata,
                 'test' => $this->test,
                 'authorize' => $this->authorize,
-                'items' => $items
+                'items' => json_encode($items)
 
             );
 
@@ -363,17 +370,25 @@ function woocommerce_mondido_init() {
          */
 
         public static function successful_request($posted) {
+            //start
             global $woocommerce;
-            // If payment was success
 
-            if ($posted['status'] == 'approved') {
+            // If payment was success
+            $status = $posted['status'];
+//            $order->update_status('on-hold', __('Awaiting cheque payment', 'woothemes'));
+            if ($status == 'approved'  || $status == 'authorized' ) {
                 $order = new WC_Order((int) $posted["payment_ref"]);
 
                 // if order not exists, die()
                 if($order->post == null) return;
-
+                $stored_status = get_post_meta( $order->id, 'mondido-transaction-status' );
+                if(count($stored_status) > 0){
+                    if($stored_status[0] == 'approved' || $stored_status[0] == 'authorized'){
+                        return;
+                    }
+                }
                 // if order is not pending, die()
-                if($order->post_status != "wc-pending"){
+                if($order->post_status != "wc-pending" ){
                     $message = __(
                         sprintf("Invalid Callback for Order #%s."
                             . " Status is not pending."
@@ -387,6 +402,7 @@ function woocommerce_mondido_init() {
                     $log->add( 'mondido', $message );
                     return;
                 }
+//                $order->update_status('on-hold', __( 'Awaiting  payment', 'woocommerce' ));
 
                 // Check whether payment is correct
                 $hash = generate_mondido_hash(
@@ -406,8 +422,19 @@ function woocommerce_mondido_init() {
                         )
                     );
 
-                    // Payment Complete
-                    $order->payment_complete( $posted['transaction_id'] );
+                    if($status == 'authorized'){
+//                        $order->update_status('on-hold', __('Awaiting Mondido payment capture', 'woocommerce'));
+                        update_post_meta( $order->id, 'mondido-transaction-status', 'authorized' );
+                        $order->reduce_order_stock();
+
+                    }elseif($status == 'approved'){
+                        // Payment Complete
+                        // Reduce stock levels
+                        update_post_meta( $order->id, 'mondido-transaction-status', 'approved' );
+                        $order->reduce_order_stock();
+                        $order->payment_complete( $posted['transaction_id'] );
+                    }
+                    update_post_meta( $order->id, 'mondido-transaction-id', $posted['transaction_id'] );
 
                     // Remove cart
                     $woocommerce->cart->empty_cart();
@@ -427,6 +454,8 @@ function woocommerce_mondido_init() {
                     );
                 }
             }
+            //end
+
         }
     }
 
