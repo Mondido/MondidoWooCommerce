@@ -1,4 +1,4 @@
-﻿<?php
+﻿﻿<?php
 
 /*
   Plugin Name: Mondido Payments
@@ -9,7 +9,7 @@
   Author URI: https://www.mondido.com
  */
 
-// Actions 
+// Actions
 add_action('plugins_loaded', 'woocommerce_mondido_init', 0);
 add_action('init', array('WC_Gateway_Mondido', 'check_mondido_response'));
 add_action('valid-mondido-callcack', array('WC_Gateway_Mondido', 'successful_request'));
@@ -188,31 +188,52 @@ function woocommerce_mondido_init() {
             $products = [];
             $customer = [];
             $platform = [];
-            $order = [];
+            $order_items = [];
             $items = [];
             $cart = $woocommerce->cart->cart_contents;
+            $crt = $woocommerce->cart;
+
+            $shipping = [];
+            $shipping["name"] = "Shipping";
+            $shipping["amount"] = $crt->shipping_total + $crt->shipping_total_tax;
+            array_push($items,$shipping);
+            if($crt->discount_cart != ''){
+                $discount = [];
+                $discount["name"] = "Discount";
+                $discount["amount"] = number_format(0-($crt->discount_cart + $crt->discount_cart_tax), 2, '.', '');
+                array_push($items,$discount);
+            }
+
             #vat weight attributes
             foreach($cart as $item){
                 $c_item = [];
+                $items_item = [];
+
                 $c_item["id"] = $item['product_id'];
                 $c_item["quantity"] = $item['quantity'];
-                $c_item["total_amount"] = $item['line_total'];
+                $c_item["total_amount"] = number_format($item['line_total'], 2, '.', '');
+
                 $prod = new WC_Product($item["product_id"]);
 
                 $c_item["image"] = $prod->get_image();
-                $c_item["weight"] = $prod->weight();
+                $c_item["weight"] = $prod->get_weight();
+                $c_item["vat"] = number_format($item['line_tax'], 2, '.', '');
+                $items_item["vat"] = number_format($item['line_tax'], 2, '.', '');
+
                 foreach($item["data"] as $data){
                     $c_item["amount"] = $data->price;
+                    $items_item["amount"] = $data->price;
                     $c_item["shipping_class"] = $data->shipping_class;
                     $c_item["name"] = $data->post->post_title;
+                    $items_item["name"] = $data->post->post_title;
                     $c_item["url"] = $data->post->guid;
 
                 }
 
                 array_push($products,$c_item);
+                array_push($items,$items_item);
             }
 
-            #plugin version
             $platform["type"] = "wocoomerce";
             $platform["version"] = $woocommerce->version;
             $platform["language_version"] = phpversion();
@@ -229,11 +250,16 @@ function woocommerce_mondido_init() {
             $customer["first_name"] = $order->billing_first_name;
             $customer["last_name"] = $order->billing_last_name;
             $customer["phone"] = $order->billing_phone;
+            $coupons = [];
+            foreach($crt->applied_coupons as $coupon){
+                $coup_item = [];
+                $coup_item["code"] = $coupon;
+                array_push($coupons,$coup_item);
+            }
+            $order_items["coupons"] = $coupons;
+            $order_items["discount"] = $crt->discount_cart;
+            $order_items["discount_vat"] = $crt->discount_cart_tax;
 
-
-#order
-            #discount
-            #voucher name
 #            items (array with product information)
 #o	name (product name)
 #o	description (description, quantity, reference number)
@@ -250,7 +276,7 @@ function woocommerce_mondido_init() {
                 "products" => $products,
                 "customer" => $customer,
                 "platform" => $platform,
-                "order" => $order
+                "order" => $order_items
 
             ];
 
