@@ -9,10 +9,74 @@
   Author URI: https://www.mondido.com
  */
 
-// Actions 
+// Actions
 add_action('plugins_loaded', 'woocommerce_mondido_init', 0);
 add_action('init', array('WC_Gateway_Mondido', 'check_mondido_response'));
 add_action('valid-mondido-callcack', array('WC_Gateway_Mondido', 'successful_request'));
+add_action( 'add_meta_boxes', 'MY_order_meta_boxes' );
+add_action( 'admin_footer', 'my_action_javascript' ); // Write our JS below here
+add_action( 'wp_ajax_my_action', 'my_action_callback' );
+
+function my_action_callback() {
+    global $wpdb; // this is how you get access to the database
+
+    $whatever = intval( $_POST['id'] );
+
+    $whatever += 10;
+
+    echo $whatever;
+
+    wp_die(); // this is required to terminate immediately and return a proper response
+}
+function my_action_javascript() {
+    global $woocommerce;
+    $id = $_GET['post'];
+    ?>
+    <script type="text/javascript" >
+        jQuery(document).ready(function($) {
+
+            var data = {
+                'action': 'my_action',
+                'id': '<?=$id?>'
+            };
+
+            $('#mondido_capture').on('click',function(e){
+                e.preventDefault();
+                jQuery.post(ajaxurl, data, function(response) {
+                    alert('Mondido capture response: ' + response);
+                });
+
+            });
+            // since 2.8 ajaxurl is always defined in the admin header and points to admin-ajax.php
+        });
+    </script> <?php
+}
+
+
+function MY_order_meta_boxes()
+{
+    add_meta_box(
+        'woocommerce-order-YOUR-UNIQUE-REF',
+        __( 'Mondido Payments' ),
+        'order_meta_box_YOURCONTENT',
+        'shop_order',
+        'side',
+        'default'
+    );
+}
+function order_meta_box_YOURCONTENT()
+{
+    global $woocommerce;
+    $id = $_GET['post'];
+
+    $stored_status = get_post_meta( $id, 'mondido-transaction-status' );
+    if(count($stored_status) > 0){
+        if($stored_status[0] == 'authorized'){
+            echo '<button id="mondido_capture">Capture Payment</button>';
+        }
+    }
+    return;
+}
 
 function woocommerce_mondido_init() {
     if (!class_exists('WC_Payment_Gateway')) {
