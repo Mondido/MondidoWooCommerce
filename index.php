@@ -1,10 +1,10 @@
-<?php
+﻿<?php
 
 /*
   Plugin Name: Mondido Payments
   Plugin URI: https://www.mondido.com/
   Description: Mondido Payment plugin for WooCommerce
-  Version: 1.4
+  Version: 2.0
   Author: Mondido Payments
   Author URI: https://www.mondido.com
  */
@@ -26,6 +26,7 @@ function woocommerce_mondido_init() {
 
             global $woocommerce;
             $this->selected_currency	= '';
+            $this->plugin_version = "2.0";
 
             // Currency
             if ( isset($woocommerce->session->client_currency) ) {
@@ -64,12 +65,19 @@ function woocommerce_mondido_init() {
             $this->description = __('Pay securely by Credit or Debit card through Mondido.', 'mondido');
             $this->merchant_id = $this->settings['merchant_id'];
             $this->secret = $this->settings['secret'];
+            $this->password = $this->settings['password'];
             $this->currency = $this->selected_currency; //pick currency from shop
             $test = 'false';
             if($this->settings['test'] == 'yes'){
                 $test = 'true';
             }
             $this->test = $test;
+
+            $authorize = 'false';
+            if($this->settings['authorize'] == 'yes'){
+                $authorize = 'true';
+            }
+            $this->authorize = $authorize;
 
             // Actions
             add_action('woocommerce_api_' . strtolower(get_class()), array($this, 'check_mondido_response'));
@@ -88,6 +96,9 @@ function woocommerce_mondido_init() {
         public function get_secret() {
             return $this->secret;
         }
+        public function get_password() {
+            return $this->password;
+        }
 
         public function get_merchant_id() {
             return $this->merchant_id;
@@ -99,6 +110,9 @@ function woocommerce_mondido_init() {
 
         public function get_test() {
             return $this->test;
+        }
+        public function get_authorize() {
+            return $this->authorize;
         }
 
         /*
@@ -121,11 +135,22 @@ function woocommerce_mondido_init() {
                     'type' => 'text',
                     'description' => __('Given secret code from Mondido', 'mondido'),
                 ),
+                'password' => array(
+                    'title' => __('API Password', 'mondido'),
+                    'type' => 'text',
+                    'description' => __('API Password from Mondido', 'mondido'),
+                ),
                 'test' => array(
                     'title' => __('Test', 'mondido'),
                     'type' => 'checkbox',
                     'label' => __('Set in testmode.', 'mondido'),
-                    'default' => 'no')
+                    'default' => 'no'),
+                'authorize' => array(
+                    'title' => __('Authorize', 'mondido'),
+                    'type' => 'checkbox',
+                    'label' => __('Reserve money, do not auto-capture.', 'mondido'),
+                    'default' => 'yes')
+
             );
         }
 
@@ -160,10 +185,78 @@ function woocommerce_mondido_init() {
 
             global $woocommerce;
             $order = new WC_Order($order_id);
+            $products = [];
+            $customer = [];
+            $platform = [];
+            $order = [];
+            $items = [];
+            $cart = $woocommerce->cart->cart_contents;
+            #vat weight attributes
+            foreach($cart as $item){
+                $c_item = [];
+                $c_item["id"] = $item['product_id'];
+                $c_item["quantity"] = $item['quantity'];
+                $c_item["total_amount"] = $item['line_total'];
+                $prod = new WC_Product($item["product_id"]);
+
+                $c_item["image"] = $prod->get_image();
+                $c_item["weight"] = $prod->weight();
+                foreach($item["data"] as $data){
+                    $c_item["amount"] = $data->price;
+                    $c_item["shipping_class"] = $data->shipping_class;
+                    $c_item["name"] = $data->post->post_title;
+                    $c_item["url"] = $data->post->guid;
+
+                }
+
+                array_push($products,$c_item);
+            }
+
+            #plugin version
+            $platform["type"] = "wocoomerce";
+            $platform["version"] = $woocommerce->version;
+            $platform["language_version"] = phpversion();
+            $platform["plugin_version"] = $this->plugin_version;
+            $order = new WC_Order( $order_id );
+
+            $customer["country"] = $order->billing_country;
+            $customer["city"] = $order->billing_city;
+            $customer["zip"] = $order->billing_postcode;
+            $customer["state"] = $order->billing_state;
+            $customer["address_1"] = $order->billing_address_1;
+            $customer["address_2"] = $order->billing_address_2;
+            $customer["email"] = $order->billing_email;
+            $customer["first_name"] = $order->billing_first_name;
+            $customer["last_name"] = $order->billing_last_name;
+            $customer["phone"] = $order->billing_phone;
+
+
+#order
+            #discount
+            #voucher name
+#            items (array with product information)
+#o	name (product name)
+#o	description (description, quantity, reference number)
+#o	amount (total incl. vat)
+#o	vat_amount
+
+
+
+
+
+
+
+            $md = [
+                "products" => $products,
+                "customer" => $customer,
+                "platform" => $platform,
+                "order" => $order
+
+            ];
 
             //$cart = new WC_Cart();
             //$cart->get_cart_from_session();
-            $metadata = '';
+            $metadata = json_encode($md);
             $amount = number_format($order->order_total, 2, '.', '');
             $merchant_id = trim($this->merchant_id);
             $currency = trim($this->currency);
@@ -179,7 +272,10 @@ function woocommerce_mondido_init() {
                 'success_url' => $this->get_return_url($order),
                 'error_url' => $order->get_cancel_order_url(),
                 'metadata' => $metadata,
-                'test' => $this->test
+                'test' => $this->test,
+                'authorize' => $this->authorize,
+                'items' => $items
+
             );
 
             $mondido_args_array = array();
