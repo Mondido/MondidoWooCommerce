@@ -9,7 +9,7 @@
   Author URI: https://www.mondido.com
  */
 
-// Actions
+// Actions 
 add_action('plugins_loaded', 'woocommerce_mondido_init', 0);
 add_action('init', array('WC_Gateway_Mondido', 'check_mondido_response'));
 add_action('valid-mondido-callback', array('WC_Gateway_Mondido', 'successful_request'));
@@ -495,12 +495,69 @@ function woocommerce_mondido_init() {
             echo '<p>' . __('Thank you for your order, please click the button below to pay with Mondido.', 'mondido') . '</p>';
             echo $this->generate_mondido_form($order);
         }
+        public function parse_webhook($transaction, $mondido){
+            $trans = $mondido->get_transaction($transaction["payment_ref"]);
+            //check if we have the same transaction
+            if($trans != null && $transaction['id'] == $trans['id']){
+                $hash = generate_mondido_hash($transaction["payment_ref"],true, $transaction['status']);
+                if($hash == $transaction['response_hash']){ //hash is valid
 
+                    //check status updates
+                    $status = $transaction['status'];
+                    $order = new WC_Order((int) $transaction["payment_ref"]);
+                    if($status == 'approved'){
+                        $order->update_status('processing', __( 'Mondido payment approved!', 'woocommerce' ));
+                        $order->add_order_note( sprintf( __( 'Webhook callback transaction approved %s ', 'woocommerce' ), $transaction['id'] ));
+                    }elseif($status == 'declined'){
+                        $order->update_status('failed', __( 'Mondido payment declined!', 'woocommerce' ));
+                        $order->add_order_note( sprintf( __( 'Webhook callback transaction declined %s ', 'woocommerce' ), $transaction['id'] ));
+                    }elseif($status == 'failed'){
+                        $order->update_status('failed', __( 'Mondido payment failed!', 'woocommerce' ));
+                        $order->add_order_note( sprintf( __( 'Webhook callback transaction failed %s ', 'woocommerce' ), $transaction['id'] ));
+                    }elseif($status == 'pending'){
+                        $order->update_status('on-hold', __( 'Mondido payment pending!', 'woocommerce' ));
+                        $order->add_order_note( sprintf( __( 'Webhook callback transaction pending %s ', 'woocommerce' ), $transaction['id'] ));
+                    }elseif($status == 'authorized'){
+                        $order->update_status('on-hold', __( 'Mondido payment authorized!', 'woocommerce' ));
+                        $order->add_order_note( sprintf( __( 'Webhook callback transaction authorized %s ', 'woocommerce' ), $transaction['id'] ));
+                    }
+
+                    //check for new delivery address
+
+                    if($transaction['payment_details']['city'] && $transaction['payment_details']['zip']){
+
+                        $address = array(
+                            'first_name' => $transaction['payment_details']['first_name'],
+                            'last_name'  => $transaction['payment_details']['last_name'],
+                            'company'    => '',
+                            'email'      => $transaction['payment_details']['email'],
+                            'phone'      => $transaction['payment_details']['phone'],
+                            'address_1'  => $transaction['payment_details']['address_1'],
+                            'address_2'  => $transaction['payment_details']['address_2'],
+                            'city'       => $transaction['payment_details']['city'],
+                            'state'      => '',
+                            'postcode'   => $transaction['payment_details']['zip'],
+                            'country'    => $transaction['payment_details']['country_code']
+                        );
+                        $order->set_address( $address, 'shipping' );
+
+                        $order->add_order_note( sprintf( __( 'Webhook callback updated shipping address %s ', 'woocommerce' ), $transaction['id'] ));
+                    }
+
+                }
+            }
+        }
         /*
          * Check for valid mondido server callback
          */
 
         public static function check_mondido_response() {
+            $raw_body = file_get_contents("php://input");
+            $array = json_decode($raw_body,true);
+            if($array['response_hash']){
+                $mondido = new WC_Gateway_Mondido();
+                $mondido->parse_webhook($array,$mondido);
+            }
             $_GET = stripslashes_deep($_GET);
             $expected_fields = array(
                 "hash",
@@ -589,7 +646,6 @@ function woocommerce_mondido_init() {
                     $log->add( 'mondido', $message );
                     return;
                 }
-//                $order->update_status('on-hold', __( 'Awaiting  payment', 'woocommerce' ));
 
                 // Check whether payment is correct
                 $hash = generate_mondido_hash(
@@ -610,7 +666,6 @@ function woocommerce_mondido_init() {
                     );
 
                     if($status == 'authorized'){
-//                        $order->update_status('on-hold', __('Awaiting Mondido payment capture', 'woocommerce'));
                         update_post_meta( $order->id, 'mondido-transaction-status', 'authorized' );
                         $order->update_status('on-hold', __( 'Awaiting Mondido payment', 'woocommerce' ));
                         $order->reduce_order_stock();
