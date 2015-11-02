@@ -1,6 +1,6 @@
 Mondido Payments 
 =======================
-WooCommerce plugin v1.4
+WooCommerce plugin v2.0
 
 1. Get your mondido account at: https://mondido.com  
 2. Click in the "Download ZIP" button in the right menu of this page  
@@ -15,6 +15,19 @@ WooCommerce plugin v1.4
 
 
 ## Changelog
+2015-11-02
+- Updated Metadata structure
+- Added items
+- Added support for Authorize (as default)
+- Added API password 
+- Added Capture button in Orders view
+- Added Payment details in Orders view
+- Added webhook endpoint (http://www.myshop.com/index.php/checkout/order-received)
+- Added shipping address updates in webhook callback (for invoice payments)
+- Added more robust callback handling
+- Added support for standard refunds
+- Added more notifications in Orders view
+
 
 2015-05-25
 - Applied filter on metadata
