@@ -1,5 +1,4 @@
-﻿﻿<?php
-
+<?php
 /*
   Plugin Name: Mondido Payments
   Plugin URI: https://www.mondido.com/
@@ -21,8 +20,7 @@ add_action( 'wp_ajax_my_action', array('WC_Gateway_Mondido','my_action_callback'
 function my_action_javascript() {
     global $woocommerce;
     $id = $_GET['post'];
-    ?>
-    <script type="text/javascript" >
+    ?><script type="text/javascript" >
         jQuery(document).ready(function($) {
 
             var data = {
@@ -39,7 +37,7 @@ function my_action_javascript() {
             });
             // since 2.8 ajaxurl is always defined in the admin header and points to admin-ajax.php
         });
-    </script> <?php
+    </script><?php
 }
 
 
@@ -745,4 +743,4 @@ function woocommerce_mondido_init() {
     if (is_admin()) {
         add_action('load-post.php', 'WC_Gateway_Mondido');
     }
-}
+}?>
