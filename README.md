@@ -2,6 +2,9 @@ Mondido Payments
 =======================
 WooCommerce plugin v2.0
 
+Version 2.0 is a major update to handle metadata, invoicing, bank payments and webhook updates.
+
+
 1. Get your mondido account at: https://mondido.com  
 2. Click in the "Download ZIP" button in the right menu of this page  
 3. Upload it into your WooCommerce Plugin page:  
