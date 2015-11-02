@@ -12,7 +12,7 @@
 // Actions
 add_action('plugins_loaded', 'woocommerce_mondido_init', 0);
 add_action('init', array('WC_Gateway_Mondido', 'check_mondido_response'));
-add_action('valid-mondido-callcack', array('WC_Gateway_Mondido', 'successful_request'));
+add_action('valid-mondido-callback', array('WC_Gateway_Mondido', 'successful_request'));
 add_action( 'add_meta_boxes', 'MY_order_meta_boxes' );
 add_action( 'admin_footer', 'my_action_javascript' ); // Write our JS below here
 add_action( 'wp_ajax_my_action', array('WC_Gateway_Mondido','my_action_callback'));
@@ -62,11 +62,39 @@ function order_meta_box_YOURCONTENT()
     $stored_status = get_post_meta( $id, 'mondido-transaction-status' );
     if(count($stored_status) > 0){
         if($stored_status[0] == 'authorized'){
-            echo '<button id="mondido_capture">Capture Payment</button>';
+            echo '<button style="margin-bottom: 20px;" id="mondido_capture">Capture Payment</button>';
         }
+    }
+    $mondido = new WC_Gateway_Mondido();
+
+    $t = $mondido->get_transaction($id);
+
+    if ($t != null){
+        $has_3ds = 'No';
+        if($t['mpi_ref'] != ''){
+            $has_3ds = 'Yes';
+        }
+        $txt =<<<EOT
+        <div><strong>Payment Info:</strong></div>
+<div><strong>Type:</strong> {$t['transaction_type']}</div>
+<div><strong>Number:</strong> {$t['card_number']}</div>
+<div><strong>Name:</strong> {$t['card_holder']}</div>
+<div><strong>Card:</strong> {$t['payment_details']['card_type']}</div>
+<div><strong>Status: </strong> {$t['status']}</div>
+<div><sgtrong>3D Secure:</strong> {$has_3ds}</div>
+<div><a href="{$t['href']}" target="_blank">Payment Link</a></div>
+<p>
+<div><a href="https://admin.mondido.com/transactions/{$t['id']}" target="_blank">View at Mondido</a></div>
+</p>
+
+
+EOT;
+        echo $txt;
     }
     return;
 }
+
+
 
 function woocommerce_mondido_init() {
     if (!class_exists('WC_Payment_Gateway')) {
@@ -77,9 +105,10 @@ function woocommerce_mondido_init() {
     class WC_Gateway_Mondido extends WC_Payment_Gateway {
 
         public function __construct() {
-
+            $this->view_transaction_url = 'https://admin.mondido.com/transactions/%s';
             $this->supports           = array(
-                'refunds'
+                'refunds',
+                'products'
             );
             global $woocommerce;
             $this->selected_currency	= '';
@@ -149,6 +178,33 @@ function woocommerce_mondido_init() {
         /*
          * Function for get settings variabler in hash functions.
          */
+
+
+        function fetch_transaction_from_API($transaction_id, $post_id){
+            $response = $this->CallAPI('GET','https://api.mondido.com/v1/transactions/'.$transaction_id,null,$this->get_merchant_id().':'.$this->get_password());
+            if($response['error']){
+                $log = new WC_Logger();
+                $log->add( 'mondido get transaction error', $response );
+                return null;
+            }else{
+                $this->store_transaction($post_id,$response['body']);
+                $json_data = json_decode($response['body'],true);
+                return $json_data;
+            }
+            return null;
+        }
+
+        function store_transaction($id, $json){
+            update_post_meta( $id, 'mondido-transaction-data', $json );
+        }
+
+        function get_transaction($id){
+            $t = get_post_meta( $id, 'mondido-transaction-data' );
+            if(count($t) > 0){
+                return json_decode($t[0],true);
+            }
+            return null;
+        }
 
         public function get_secret() {
             return $this->secret;
@@ -250,6 +306,8 @@ function woocommerce_mondido_init() {
                 echo json_decode($response['body'],true)['description'];
                 wp_die();
             }
+            $this->store_transaction($ids[0],$response['body']);
+
             $transaction = json_decode($response['body'],true);
             if($transaction['status'] == 'approved'){
                 $order->payment_complete( $transaction['id'] );
@@ -257,6 +315,7 @@ function woocommerce_mondido_init() {
                 $log->add( 'mondido capture ','success' );
                 update_post_meta( $order->id, 'mondido-transaction-status', 'approved' );
                 $order->update_status('processing', __( 'Mondido payment captured!', 'woocommerce' ));
+                $order->add_order_note( sprintf( __( 'Captured transaction %s ', 'woocommerce' ), $transaction['id'] ));
 
                 echo 'Success!';
                 wp_die();
@@ -271,6 +330,7 @@ function woocommerce_mondido_init() {
         public function process_refund( $order_id, $amount = null,$reason = 'wocommerce refund') {
             // Do your refund here. Refund $amount for the order with ID $order_id
             $ids = get_post_meta( $order_id, 'mondido-transaction-id' );
+            $order = new WC_Order($order_id);
             //refund $ids[0]
             $data = array('transaction_id' => $ids[0],'amount' => $amount,'reason' => $reason);
             $response = $this->CallAPI('POST','https://api.mondido.com/v1/refunds',$data,$this->get_merchant_id().':'.$this->get_password());
@@ -279,6 +339,7 @@ function woocommerce_mondido_init() {
                 $log->add( 'mondido refund', $response );
                 return false;
             }
+            $order->add_order_note( sprintf( __( 'Refunded %s ', 'woocommerce' ), $amount ));
             return true;
         }
         /*
@@ -319,7 +380,7 @@ function woocommerce_mondido_init() {
 
                 $prod = new WC_Product($item["product_id"]);
 
-                $c_item["image"] = $prod->get_image();
+                $c_item["image"] = $this->get_img_url($prod->get_image());
                 $c_item["weight"] = $prod->get_weight();
                 $c_item["vat"] = number_format($item['line_tax'], 2, '.', '');
                 $items_item["vat"] = number_format($item['line_tax'], 2, '.', '');
@@ -446,7 +507,7 @@ function woocommerce_mondido_init() {
                 if(!isset($_GET[$field])) return;
             }
 
-            do_action("valid-mondido-callcack", $_GET);
+            do_action("valid-mondido-callback", $_GET);
         }
 
         public function CallAPI($method, $url, $data = false, $username_pass)
@@ -472,10 +533,17 @@ function woocommerce_mondido_init() {
                 //              echo '</pre>';
             }
 
-            return array('error', false, 'status' => $result['headers']['status'], 'body' => $result['body']);
+            return array('error' => false, 'status' => $result['headers']['status'], 'body' => $result['body']);
         }
 
 
+        function get_img_url($html){
+            $doc = new DOMDocument();
+            $doc->loadHTML($html);
+            $xpath = new DOMXPath($doc);
+            $src = $xpath->evaluate("string(//img/@src)");
+            return $src;
+        }
 
         /*
          * Successful Payment
@@ -484,6 +552,8 @@ function woocommerce_mondido_init() {
         public static function successful_request($posted) {
             //start
             global $woocommerce;
+            $mondido = new WC_Gateway_Mondido();
+            $mondido->fetch_transaction_from_API($posted['transaction_id'],$posted["payment_ref"]);
 
             // If payment was success
             $status = $posted['status'];
@@ -547,6 +617,7 @@ function woocommerce_mondido_init() {
                         $order->reduce_order_stock();
                         $order->payment_complete( $posted['transaction_id'] );
                     }
+
                     update_post_meta( $order->id, 'mondido-transaction-id', $posted['transaction_id'] );
 
                     // Remove cart
