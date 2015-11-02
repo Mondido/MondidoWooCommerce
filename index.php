@@ -57,17 +57,13 @@ function MY_order_meta_boxes()
 function order_meta_box_YOURCONTENT()
 {
     global $woocommerce;
-    $id = $_GET['post'];
-
-    $stored_status = get_post_meta( $id, 'mondido-transaction-status' );
-    if(count($stored_status) > 0){
-        if($stored_status[0] == 'authorized'){
-            echo '<button style="margin-bottom: 20px;" id="mondido_capture">Capture Payment</button>';
-        }
-    }
     $mondido = new WC_Gateway_Mondido();
-
+    $id = $_GET['post'];
     $t = $mondido->get_transaction($id);
+
+    if($t != null && $t['status'] == 'authorized'){
+        echo '<button style="margin-bottom: 20px;" id="mondido_capture">Capture Payment</button>';
+    }
 
     if ($t != null){
         $has_3ds = 'No';
@@ -81,7 +77,7 @@ function order_meta_box_YOURCONTENT()
 <div><strong>Name:</strong> {$t['card_holder']}</div>
 <div><strong>Card:</strong> {$t['payment_details']['card_type']}</div>
 <div><strong>Status: </strong> {$t['status']}</div>
-<div><sgtrong>3D Secure:</strong> {$has_3ds}</div>
+<div><strong>3D Secure:</strong> {$has_3ds}</div>
 <div><a href="{$t['href']}" target="_blank">Payment Link</a></div>
 <p>
 <div><a href="https://admin.mondido.com/transactions/{$t['id']}" target="_blank">View at Mondido</a></div>
@@ -295,24 +291,30 @@ function woocommerce_mondido_init() {
             global $woocommerce;
             $mondido = new WC_Gateway_Mondido();
 
-            $ids = get_post_meta( $_POST['id'], 'mondido-transaction-id' );
+            $t = $mondido->get_transaction($_POST['id']);
             //refund $ids[0]
             $order = new WC_Order((int) $_POST['id']);
             $data = array('amount' => number_format($order->order_total, 2, '.', ''));
-            $response = $mondido->CallAPI('PUT','https://api.mondido.com/v1/transactions/'.$ids[0].'/capture',$data,$mondido->get_merchant_id().':'.$mondido->get_password());
+            $response = $mondido->CallAPI('PUT','https://api.mondido.com/v1/transactions/'.$t['id'].'/capture',$data,$mondido->get_merchant_id().':'.$mondido->get_password());
             if($response['error']){
                 $log = new WC_Logger();
                 $log->add( 'mondido capture', $response );
+                $t = $mondido->fetch_transaction_from_API($t['id'], $_POST['id']);
+                if($t != null && $t['status'] == 'approved'){
+                    $order->update_status('processing', __( 'Mondido payment captured!', 'woocommerce' ));
+                }
                 echo json_decode($response['body'],true)['description'];
                 wp_die();
             }
-            $this->store_transaction($ids[0],$response['body']);
+            $this->store_transaction($_POST['id'],$response['body']);
 
             $transaction = json_decode($response['body'],true);
             if($transaction['status'] == 'approved'){
                 $order->payment_complete( $transaction['id'] );
                 $log = new WC_Logger();
                 $log->add( 'mondido capture ','success' );
+                $mondido->fetch_transaction_from_API($t['id'], $_POST['id']);
+
                 update_post_meta( $order->id, 'mondido-transaction-status', 'approved' );
                 $order->update_status('processing', __( 'Mondido payment captured!', 'woocommerce' ));
                 $order->add_order_note( sprintf( __( 'Captured transaction %s ', 'woocommerce' ), $transaction['id'] ));
@@ -329,10 +331,13 @@ function woocommerce_mondido_init() {
         }
         public function process_refund( $order_id, $amount = null,$reason = 'wocommerce refund') {
             // Do your refund here. Refund $amount for the order with ID $order_id
-            $ids = get_post_meta( $order_id, 'mondido-transaction-id' );
+            $t = $this->get_transaction($order_id);
             $order = new WC_Order($order_id);
             //refund $ids[0]
-            $data = array('transaction_id' => $ids[0],'amount' => $amount,'reason' => $reason);
+            $amount = str_replace(',', '.', $amount);
+            $amount = number_format($amount,2,'.','');
+
+            $data = array('transaction_id' => $t['id'],'amount' => $amount,'reason' => $reason);
             $response = $this->CallAPI('POST','https://api.mondido.com/v1/refunds',$data,$this->get_merchant_id().':'.$this->get_password());
             if($response['error']){
                 $log = new WC_Logger();
