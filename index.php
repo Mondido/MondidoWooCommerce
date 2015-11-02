@@ -9,7 +9,7 @@
   Author URI: https://www.mondido.com
  */
 
-// Actions 
+// Actions
 add_action('plugins_loaded', 'woocommerce_mondido_init', 0);
 add_action('init', array('WC_Gateway_Mondido', 'check_mondido_response'));
 add_action('valid-mondido-callback', array('WC_Gateway_Mondido', 'successful_request'));
@@ -270,8 +270,9 @@ function woocommerce_mondido_init() {
         public function admin_options() {
             echo '<h3>' . __('Mondido', 'mondido') . '</h3>';
             echo '<p>' . __('Mondido, Simple payments, smart functions', 'mondido') . '</p>';
+            echo '<p>Please go to <a href="https://admin.mondido.com" target="_blank">https://admin.mondido.com</a> to sign up and get hold of your account information that you need to enter here.<br>Do not hesitate to contact support@mondido.com if you have any questions setting up your WooCommerce payment plugin.</p>';
+            echo '<p>All settings below can be found at this location: <a href="https://admin.mondido.com/en/settings" target="_blank">https://admin.mondido.com/en/settings</a> after you have logged in.</p>';
             echo '<table class="form-table">';
-            // Generate the HTML For the settings form.
             $this->generate_settings_html();
             echo '</table>';
         }
@@ -292,7 +293,6 @@ function woocommerce_mondido_init() {
             $mondido = new WC_Gateway_Mondido();
 
             $t = $mondido->get_transaction($_POST['id']);
-            //refund $ids[0]
             $order = new WC_Order((int) $_POST['id']);
             $data = array('amount' => number_format($order->order_total, 2, '.', ''));
             $response = $mondido->CallAPI('PUT','https://api.mondido.com/v1/transactions/'.$t['id'].'/capture',$data,$mondido->get_merchant_id().':'.$mondido->get_password());
@@ -333,7 +333,6 @@ function woocommerce_mondido_init() {
             // Do your refund here. Refund $amount for the order with ID $order_id
             $t = $this->get_transaction($order_id);
             $order = new WC_Order($order_id);
-            //refund $ids[0]
             $amount = str_replace(',', '.', $amount);
             $amount = number_format($amount,2,'.','');
 
@@ -437,8 +436,6 @@ function woocommerce_mondido_init() {
 
             ];
 
-            //$cart = new WC_Cart();
-            //$cart->get_cart_from_session();
             $metadata = json_encode($md);
             $amount = number_format($order->order_total, 2, '.', '');
             $merchant_id = trim($this->merchant_id);
@@ -588,11 +585,6 @@ function woocommerce_mondido_init() {
             if ( $result['response']['code'] != 200 ) {
                 return array('error' => true, 'status' => $result['headers']['status'], 'body' => $result['body']);
                 $error_message = $result->get_error_message();
-//                echo "Something went wrong: $error_message";
-            } else {
-                //              echo 'Response:<pre>';
-                //              print_r( $response );
-                //              echo '</pre>';
             }
 
             return array('error' => false, 'status' => $result['headers']['status'], 'body' => $result['body']);
@@ -619,7 +611,6 @@ function woocommerce_mondido_init() {
 
             // If payment was success
             $status = $posted['status'];
-//            $order->update_status('on-hold', __('Awaiting cheque payment', 'woothemes'));
             if ($status == 'approved'  || $status == 'authorized' ) {
                 $order = new WC_Order((int) $posted["payment_ref"]);
 
