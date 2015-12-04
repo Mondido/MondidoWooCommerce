@@ -1,8 +1,8 @@
 Mondido Payments 
 =======================
-WooCommerce plugin v2.0
+WooCommerce plugin v2.1
 
-Version 2.0 is a major update to handle metadata, invoicing, bank payments and webhook updates.
+Version 2.1 is a major update to handle metadata, invoicing, bank payments and webhook updates.
 
 
 1. Get your mondido account at: https://mondido.com  
@@ -15,6 +15,12 @@ Version 2.0 is a major update to handle metadata, invoicing, bank payments and w
     ![Step 4](https://raw.githubusercontent.com/anderson-mondido/WooCommerce/screenshots/screenshots/add_new_plugin_4.png)  
 5. Enable Mondido in WooCommerce and Configure your Credentials  
     ![Step 5](https://raw.githubusercontent.com/anderson-mondido/WooCommerce/screenshots/screenshots/add_new_plugin_5.png)  
+
+## Changelog
+2015-12-04
+- Added spinner on confirmation page to make the experience smooth
+- Added JavaScript navigation to move back from payment page to checkout
+- Added Swedish translation
 
 
 ## Changelog
