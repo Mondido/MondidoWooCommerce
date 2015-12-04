@@ -1,0 +1,165 @@
+msgid ""
+msgstr ""
+"Project-Id-Version: mondido\n"
+"POT-Creation-Date: 2015-12-04 13:38+0100\n"
+"PO-Revision-Date: 2015-12-04 13:46+0100\n"
+"Last-Translator: Mikael Andersson <mikael@progmera.se>\n"
+"Language-Team: Mondido <support@mondido.com>\n"
+"Language: sv_SE\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"X-Generator: Poedit 1.8.6\n"
+"X-Poedit-KeywordsList: __;gettext;gettext_noop\n"
+"X-Poedit-Basepath: ..\n"
+"Plural-Forms: nplurals=2; plural=(n != 1);\n"
+"X-Poedit-SourceCharset: UTF-8\n"
+"X-Poedit-SearchPath-0: index.php\n"
+
+#: index.php:48
+msgid "Mondido Payments"
+msgstr "Mondido betalningar"
+
+#: index.php:136
+msgid "Proceed to Mondido"
+msgstr "Gå vidare till Mondido"
+
+#: index.php:144
+msgid "Visa/Mastercard"
+msgstr "Visa / Mastercard"
+
+#: index.php:145
+msgid "Pay securely by Credit or Debit card through Mondido."
+msgstr "Betala säkert med kreditkort eller betalkort via Mondido."
+
+#: index.php:232
+msgid "Enable/Disable"
+msgstr "Aktivera Inaktivera"
+
+#: index.php:234
+msgid "Enable mondido Payment Module."
+msgstr "Aktivera Mondido Betalnings-plugin."
+
+#: index.php:237
+msgid "Merchant ID"
+msgstr "Merchant ID"
+
+#: index.php:239
+msgid "Merchant ID for Mondido"
+msgstr "Merchant ID för Mondido"
+
+#: index.php:241
+msgid "Secret"
+msgstr "Hemlig nyckel"
+
+#: index.php:243
+msgid "Given secret code from Mondido"
+msgstr "Den hemiga nyckeln från Mondido"
+
+#: index.php:246
+msgid "API Password"
+msgstr "API lösenord"
+
+#: index.php:248
+msgid "API Password from Mondido"
+msgstr "API lösenord från Mondido"
+
+#: index.php:251
+msgid "Test"
+msgstr "Testbetalningar"
+
+#: index.php:253
+msgid "Set in testmode."
+msgstr "Ställ in i test-läge."
+
+#: index.php:256
+msgid "Authorize"
+msgstr "Auktorisera"
+
+#: index.php:258
+msgid "Reserve money, do not auto-capture."
+msgstr "Reservera pengar, dra inte automatiskt."
+
+#: index.php:269
+msgid "Mondido"
+msgstr "Mondido"
+
+#: index.php:270
+msgid "Mondido, Simple payments, smart functions"
+msgstr "Mondido, enkla betalningar, smart funktionalitet"
+
+#: index.php:302 index.php:317
+msgid "Mondido payment captured!"
+msgstr "Mondido betalning har dragit pengar!"
+
+#: index.php:318
+#, php-format
+msgid "Captured transaction %s "
+msgstr "Dragna pengar %s"
+
+#: index.php:344
+#, php-format
+msgid "Refunded %s "
+msgstr "Återbetalt %s"
+
+#: index.php:466
+msgid "Pay via Mondido"
+msgstr "Betala med Mondido"
+
+#: index.php:466
+msgid "Cancel order &amp; restore cart"
+msgstr "Avbryt order och töm varukorg"
+
+#: index.php:518
+msgid "Mondido payment approved!"
+msgstr "Mondido betalning godkänd!"
+
+#: index.php:519
+#, php-format
+msgid "Webhook callback transaction approved %s "
+msgstr "Webhook callback transaktion godkänd %s"
+
+#: index.php:521
+msgid "Mondido payment declined!"
+msgstr "Mondido betalning nekad!"
+
+#: index.php:522
+#, php-format
+msgid "Webhook callback transaction declined %s "
+msgstr "Webhook callback transaktion nekad %s "
+
+#: index.php:524
+msgid "Mondido payment failed!"
+msgstr "Mondido betalning misslyckad!"
+
+#: index.php:525
+#, php-format
+msgid "Webhook callback transaction failed %s "
+msgstr "Webhook callback transaktion misslyckad %s "
+
+#: index.php:527
+msgid "Mondido payment pending!"
+msgstr "Mondido betalning påbörjad!"
+
+#: index.php:528
+#, php-format
+msgid "Webhook callback transaction pending %s "
+msgstr "Webhook callback transaktion påbörjad %s "
+
+#: index.php:530
+msgid "Mondido payment authorized!"
+msgstr "Mondido betalning auktoriserad!"
+
+#: index.php:531
+#, php-format
+msgid "Webhook callback transaction authorized %s "
+msgstr "Webhook callback transaktion auktoriserad %s "
+
+#: index.php:553
+#, php-format
+msgid "Webhook callback updated shipping address %s "
+msgstr "Webhook callback uppdaterade leveransadress %s "
+
+#: index.php:673
+msgid "Awaiting Mondido payment"
+msgstr "Väntar på Mondido betalning"

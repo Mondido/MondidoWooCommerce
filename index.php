@@ -1,9 +1,9 @@
-<?php
+﻿﻿<?php
 /*
   Plugin Name: Mondido Payments
   Plugin URI: https://www.mondido.com/
   Description: Mondido Payment plugin for WooCommerce
-  Version: 2.0
+  Version: 2.1
   Author: Mondido Payments
   Author URI: https://www.mondido.com
  */
@@ -15,7 +15,12 @@ add_action('valid-mondido-callback', array('WC_Gateway_Mondido', 'successful_req
 add_action( 'add_meta_boxes', 'MY_order_meta_boxes' );
 add_action( 'admin_footer', 'my_action_javascript' ); // Write our JS below here
 add_action( 'wp_ajax_my_action', array('WC_Gateway_Mondido','my_action_callback'));
+add_action( 'init', 'plugin_init' );
 
+function plugin_init() {
+    // localization in the init action for WPML support
+    load_plugin_textdomain( 'mondido', false, dirname( plugin_basename( __FILE__ ) ) . '/languages' );
+}
 
 function my_action_javascript() {
     global $woocommerce;
@@ -35,7 +40,7 @@ function my_action_javascript() {
                 });
 
             });
-            // since 2.8 ajaxurl is always defined in the admin header and points to admin-ajax.php
+
         });
     </script><?php
 }
@@ -271,7 +276,7 @@ function woocommerce_mondido_init() {
             echo '<p>Please go to <a href="https://admin.mondido.com" target="_blank">https://admin.mondido.com</a> to sign up and get hold of your account information that you need to enter here.<br>Do not hesitate to contact support@mondido.com if you have any questions setting up your WooCommerce payment plugin.</p>';
             echo '<p>All settings below can be found at this location: <a href="https://admin.mondido.com/en/settings" target="_blank">https://admin.mondido.com/en/settings</a> after you have logged in.</p>';
             echo '<table class="form-table">';
-            $this->generate_settings_html();
+            $this->generate_settingsẗer_html();
             echo '</table>';
         }
 
@@ -465,7 +470,10 @@ function woocommerce_mondido_init() {
 				<div class="payment_buttons">
 					<input type="submit" class="button alt" id="submit_mondido_payment_form" value="' . __('Pay via Mondido', 'mondido') . '" /> <a class="button cancel" href="' . $order->get_cancel_order_url() . '">' . __('Cancel order &amp; restore cart', 'mondido') . '</a>
 				</div>
-            </form><script>document.getElementById("mondido_payment_form").submit();</script>';
+            </form><script>if(mondido_submit)
+            {
+            document.getElementById("mondido_payment_form").submit();
+            }</script>';
         }
 
         /*
@@ -487,7 +495,19 @@ function woocommerce_mondido_init() {
          */
 
         public function receipt_page($order) {
-            echo '<p>' . __('Thank you for your order, please click the button below to pay with Mondido.', 'mondido') . '</p>';
+            $js = <<<EOT
+            <script>
+            var mondido_submit = false;
+            if(window.location.hash != '#paying'){
+                mondido_submit = true;
+                window.location.hash = 'paying';
+            }else{
+                window.history.go(-2);
+            }
+            </script>
+EOT;
+            $spinner = '<img src="https://mondido.s3.amazonaws.com/www/img/ring-alt.gif" style="position:fixed;top:50%;left:50%;transform:translate(-50%, -50%);">';
+            echo '<div style="position:fixed;z-index:1000;top:0px;left:0px;height:100%;width:100%;background-color:#e8e8e8;">' .$spinner. '</div>'.$js;
             echo $this->generate_mondido_form($order);
         }
         public function parse_webhook($transaction, $mondido){
