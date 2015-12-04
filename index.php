@@ -1,4 +1,4 @@
-﻿﻿<?php
+<?php
 /*
   Plugin Name: Mondido Payments
   Plugin URI: https://www.mondido.com/
@@ -510,7 +510,7 @@ EOT;
             echo '<div style="position:fixed;z-index:1000;top:0px;left:0px;height:100%;width:100%;background-color:#e8e8e8;">' .$spinner. '</div>'.$js;
             echo $this->generate_mondido_form($order);
         }
-        public function parse_webhook($transaction, $mondido){
+        public function parse_webhook($transaction, $mondido){ 
             $trans = $mondido->get_transaction($transaction["payment_ref"]);
             //check if we have the same transaction
             if($trans != null && $transaction['id'] == $trans['id']){
