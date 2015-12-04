@@ -276,7 +276,7 @@ function woocommerce_mondido_init() {
             echo '<p>Please go to <a href="https://admin.mondido.com" target="_blank">https://admin.mondido.com</a> to sign up and get hold of your account information that you need to enter here.<br>Do not hesitate to contact support@mondido.com if you have any questions setting up your WooCommerce payment plugin.</p>';
             echo '<p>All settings below can be found at this location: <a href="https://admin.mondido.com/en/settings" target="_blank">https://admin.mondido.com/en/settings</a> after you have logged in.</p>';
             echo '<table class="form-table">';
-            $this->generate_settingsẗer_html();
+            $this->generate_settings_html();
             echo '</table>';
         }
 
@@ -510,7 +510,7 @@ EOT;
             echo '<div style="position:fixed;z-index:1000;top:0px;left:0px;height:100%;width:100%;background-color:#e8e8e8;">' .$spinner. '</div>'.$js;
             echo $this->generate_mondido_form($order);
         }
-        public function parse_webhook($transaction, $mondido){ 
+        public function parse_webhook($transaction, $mondido){
             $trans = $mondido->get_transaction($transaction["payment_ref"]);
             //check if we have the same transaction
             if($trans != null && $transaction['id'] == $trans['id']){
