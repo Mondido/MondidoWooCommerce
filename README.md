@@ -1,6 +1,10 @@
 Mondido Payments 
 =======================
-WooCommerce plugin v2.1
+WooCommerce plugin v2.2
+
+## Changelog
+2016-01-18
+- Updated payment logo
 
 Version 2.1 is a major update to handle metadata, invoicing, bank payments and webhook updates.
 
