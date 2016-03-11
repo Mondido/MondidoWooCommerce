@@ -1,8 +1,13 @@
 Mondido Payments 
 =======================
-WooCommerce plugin v2.2
+WooCommerce plugin v2.3
 
 ## Changelog
+2016-03-11
+- Removed PHP notice warning
+- Added client and admin mail notifications
+
+
 2016-01-18
 - Updated payment logo
 
