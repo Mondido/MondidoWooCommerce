@@ -3,7 +3,7 @@
   Plugin Name: Mondido Payments
   Plugin URI: https://www.mondido.com/
   Description: Mondido Payment plugin for WooCommerce
-  Version: 2.1
+  Version: 2.3
   Author: Mondido Payments
   Author URI: https://www.mondido.com
  */
@@ -16,15 +16,18 @@ add_action( 'add_meta_boxes', 'MY_order_meta_boxes' );
 add_action( 'admin_footer', 'my_action_javascript' ); // Write our JS below here
 add_action( 'wp_ajax_my_action', array('WC_Gateway_Mondido','my_action_callback'));
 add_action( 'init', 'plugin_init' );
-
 function plugin_init() {
     // localization in the init action for WPML support
     load_plugin_textdomain( 'mondido', false, dirname( plugin_basename( __FILE__ ) ) . '/languages' );
 }
 
+
 function my_action_javascript() {
     global $woocommerce;
-    $id = $_GET['post'];
+    $id = 0;
+    if(isset($_GET["post"])){
+        $id = $_GET["post"];
+    }  
     ?><script type="text/javascript" >
         jQuery(document).ready(function($) {
 
@@ -347,6 +350,7 @@ function woocommerce_mondido_init() {
                 return false;
             }
             $order->add_order_note( sprintf( __( 'Refunded %s ', 'woocommerce' ), $amount ));
+            do_action( 'woocommerce_order_status_refunded', $order->id );
             return true;
         }
         /*
@@ -474,6 +478,7 @@ function woocommerce_mondido_init() {
             {
             document.getElementById("mondido_payment_form").submit();
             }</script>';
+            
         }
 
         /*
@@ -521,17 +526,22 @@ EOT;
                     $status = $transaction['status'];
                     $order = new WC_Order((int) $transaction["payment_ref"]);
                     if($status == 'approved'){
-                        $order->update_status('processing', __( 'Mondido payment approved!', 'woocommerce' ));
                         $order->add_order_note( sprintf( __( 'Webhook callback transaction approved %s ', 'woocommerce' ), $transaction['id'] ));
+
+                        $order->payment_complete();
+                        $order->update_status( 'completed' );
+
                     }elseif($status == 'declined'){
                         $order->update_status('failed', __( 'Mondido payment declined!', 'woocommerce' ));
                         $order->add_order_note( sprintf( __( 'Webhook callback transaction declined %s ', 'woocommerce' ), $transaction['id'] ));
                     }elseif($status == 'failed'){
                         $order->update_status('failed', __( 'Mondido payment failed!', 'woocommerce' ));
                         $order->add_order_note( sprintf( __( 'Webhook callback transaction failed %s ', 'woocommerce' ), $transaction['id'] ));
+
                     }elseif($status == 'pending'){
                         $order->update_status('on-hold', __( 'Mondido payment pending!', 'woocommerce' ));
                         $order->add_order_note( sprintf( __( 'Webhook callback transaction pending %s ', 'woocommerce' ), $transaction['id'] ));
+
                     }elseif($status == 'authorized'){
                         $order->update_status('on-hold', __( 'Mondido payment authorized!', 'woocommerce' ));
                         $order->add_order_note( sprintf( __( 'Webhook callback transaction authorized %s ', 'woocommerce' ), $transaction['id'] ));
@@ -617,6 +627,9 @@ EOT;
             return $src;
         }
 
+
+
+
         /*
          * Successful Payment
          */
@@ -631,7 +644,7 @@ EOT;
             $status = $posted['status'];
             if ($status == 'approved'  || $status == 'authorized' ) {
                 $order = new WC_Order((int) $posted["payment_ref"]);
-
+//                do_action('woocommerce_order_status_pending_to_completed', $order->id );
                 // if order not exists, die()
                 if($order->post == null) return;
                 $stored_status = get_post_meta( $order->id, 'mondido-transaction-status' );
@@ -684,7 +697,9 @@ EOT;
                         // Reduce stock levels
                         update_post_meta( $order->id, 'mondido-transaction-status', 'approved' );
                         $order->reduce_order_stock();
-                        $order->payment_complete( $posted['transaction_id'] );
+                        $order->payment_complete($posted['transaction_id']);
+                        WC()->mailer()->emails['WC_Email_Customer_Processing_Order']->trigger($order->id);
+                        WC()->mailer()->emails['WC_Email_New_Order']->trigger($order->id);
                     }
 
                     update_post_meta( $order->id, 'mondido-transaction-id', $posted['transaction_id'] );
@@ -705,6 +720,7 @@ EOT;
                             'woocommerce'
                         )
                     );
+
                 }
             }
             //end
