@@ -3,7 +3,7 @@
   Plugin Name: Mondido Payments
   Plugin URI: https://www.mondido.com/
   Description: Mondido Payment plugin for WooCommerce
-  Version: 2.3
+  Version: 2.4
   Author: Mondido Payments
   Author URI: https://www.mondido.com
  */
@@ -16,11 +16,11 @@ add_action( 'add_meta_boxes', 'MY_order_meta_boxes' );
 add_action( 'admin_footer', 'my_action_javascript' ); // Write our JS below here
 add_action( 'wp_ajax_my_action', array('WC_Gateway_Mondido','my_action_callback'));
 add_action( 'init', 'plugin_init' );
+add_action( 'wp_footer', array( 'WC_Gateway_Mondido', 'marketing_footer' ) );
 function plugin_init() {
     // localization in the init action for WPML support
     load_plugin_textdomain( 'mondido', false, dirname( plugin_basename( __FILE__ ) ) . '/languages' );
 }
-
 
 function my_action_javascript() {
     global $woocommerce;
@@ -366,9 +366,17 @@ function woocommerce_mondido_init() {
             $platform = [];
             $order_items = [];
             $items = [];
+            $analytics = [];
+            $google = [];
             $cart = $woocommerce->cart->cart_contents;
             $crt = $woocommerce->cart;
-
+            if(isset($_COOKIE['m_ad_code'])) {
+                $google["ad_code"] = $_COOKIE['m_ad_code'];
+            }
+            if(isset($_COOKIE['m_ref_str'])) {
+                $analytics["referrer"] = $_COOKIE['m_ref_str'];
+            }
+            $analytics['google'] = $google;
             $shipping = [];
             $shipping["name"] = "Shipping";
             $shipping["amount"] = $crt->shipping_total + $crt->shipping_total_tax;
@@ -439,8 +447,8 @@ function woocommerce_mondido_init() {
                 "products" => $products,
                 "customer" => $customer,
                 "platform" => $platform,
-                "order" => $order_items
-
+                "order" => $order_items,
+                "analytics" => $analytics
             ];
 
             $metadata = json_encode($md);
@@ -572,6 +580,11 @@ EOT;
                 }
             }
         }
+        
+        public static function marketing_footer(){
+            echo '<script type="text/javascript" src="https://cdn-02.mondido.com/www/js/os-shop-v1.js"></script>';
+        }   
+        
         /*
          * Check for valid mondido server callback
          */
