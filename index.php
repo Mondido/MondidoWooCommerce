@@ -435,8 +435,16 @@ function woocommerce_mondido_init() {
             }
             $analytics['google'] = $google;
             $shipping = [];
-            $shipping["name"] = "Shipping";
-            $shipping["amount"] = $crt->shipping_total + $crt->shipping_total_tax;
+            $shipping["description"] = "Shipping";
+            $shipping_total = $crt->shipping_total + $crt->shipping_tax_total;
+            
+            $shipping["amount"] = $shipping_total;
+            $shipping["artno"] = 0;
+            $shipping["vat"] = ($crt->shipping_tax_total / $shipping_total) *100;
+            $shipping["unit_price"] = $shipping_total;
+            $shipping["discount"] = 0;
+            $shipping["qty"] = 1;
+
             array_push($items,$shipping);
             if($crt->discount_cart != ''){
                 $discount = [];
@@ -465,12 +473,18 @@ function woocommerce_mondido_init() {
                 $c_item["url"] = $prod->post->guid;
 
                //invoice item
-                $items_item["artno"] = $item['product_id'];
-                $items_item["vat"] = number_format($item['line_tax'], 2, '.', '');
-                $items_item["amount"] = number_format($order->order_total, 2, '.', '');
+                $items_item["artno"] = $prod->get_sku();
+                $price_inc_tax = $prod->get_price_including_tax();
+                $price_ex_tax = $prod->get_price_excluding_tax();
+                $tax = $price_inc_tax - $price_ex_tax;
+                $tax_perc = ($tax / $price_inc_tax) * 100;
+                $qty = $item['quantity'];
+                
+                $items_item["vat"] = number_format($tax_perc, 2, '.', '');
+                $items_item["amount"] = number_format($price_inc_tax * $qty, 2, '.', '');
                 $items_item["description"] = $prod->post->post_title;
                 $items_item["qty"] = $item['quantity'];
-                $items_item["unit_price"] = number_format($item['line_total'], 2, '.', '');
+                $items_item["unit_price"] = number_format($price_inc_tax, 2, '.', '');
                 $items_item["discount"] = 0;
 
                 array_push($products,$c_item);
