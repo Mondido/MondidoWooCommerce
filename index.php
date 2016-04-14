@@ -137,7 +137,7 @@ function woocommerce_mondido_init() {
 
 
             $this->id = 'mondido';
-            $this->icon = WP_PLUGIN_URL . "/" . plugin_basename(dirname(__FILE__)) . '/mondido.png';
+            $this->icon = "https://cdn-02.mondido.com/www/img/wp-mondido.png";
             $this->has_fields = false;
             $this->method_title = 'Mondido';
             $this->method_description = __('', 'mondido');
@@ -149,7 +149,29 @@ function woocommerce_mondido_init() {
             $this->init_settings();
 
             // Get from users settings
-            $this->title = __('Visa/Mastercard', 'mondido');
+            $payment_options = '';
+            if($this->settings['visa-mc'] == 'yes'){
+                $payment_options = 'Visa, MasterCard';
+            }
+            if($this->settings['amex'] == 'yes'){
+                $payment_options = $payment_options.', Amex';
+            }
+            if($this->settings['diners'] == 'yes'){
+                $payment_options = $payment_options.', Diners';
+            }
+            if($this->settings['swish'] == 'yes'){
+                $payment_options = $payment_options.', Swish';
+            }
+            if($this->settings['bank'] == 'yes'){
+                $payment_options = $payment_options.', Bank';
+            }
+            if($this->settings['invoice'] == 'yes'){
+                $payment_options = $payment_options.', Faktura';
+            }
+            if(substr( $payment_options, 0, 2 ) === ", "){
+                $payment_options = substr($payment_options, 2);
+            }
+            $this->title = $payment_options;
             $this->description = __('Pay securely by Credit or Debit card through Mondido.', 'mondido');
             $this->merchant_id = $this->settings['merchant_id'];
             $this->secret = $this->settings['secret'];
@@ -253,7 +275,7 @@ function woocommerce_mondido_init() {
                 'password' => array(
                     'title' => __('API Password', 'mondido'),
                     'type' => 'text',
-                    'description' => __('API Password from Mondido', 'mondido'),
+                    'description' => __('API Password from Mondido', 'mondido').' (<a href="https://admin.mondido.com/settings">https://admin.mondido.com/settings</a>',
                 ),
                 'test' => array(
                     'title' => __('Test', 'mondido'),
@@ -264,7 +286,38 @@ function woocommerce_mondido_init() {
                     'title' => __('Authorize', 'mondido'),
                     'type' => 'checkbox',
                     'label' => __('Reserve money, do not auto-capture.', 'mondido'),
-                    'default' => 'yes')
+                    'default' => 'yes'),
+                    
+                'visa-mc' => array(
+                    'title' => __('Visa, MasterCard', 'mondido'),
+                    'type' => 'checkbox',
+                    'label' => '',
+                    'default' => 'yes'),
+                'amex' => array(
+                    'title' => __('American Express', 'mondido'),
+                    'type' => 'checkbox',
+                    'label' => '',
+                    'default' => 'no'),
+                'diners' => array(
+                    'title' => __('Diners Club', 'mondido'),
+                    'type' => 'checkbox',
+                    'label' => '',
+                    'default' => 'no'),
+                'swish' => array(
+                    'title' => __('Swish', 'mondido'),
+                    'type' => 'checkbox',
+                    'label' => '',
+                    'default' => 'no'),
+                'bank' => array(
+                    'title' => __('Direktbank', 'mondido'),
+                    'type' => 'checkbox',
+                    'label' => '',
+                    'default' => 'no'),
+                'invoice' => array(
+                    'title' => __('Faktura', 'mondido'),
+                    'type' => 'checkbox',
+                    'label' => '',
+                    'default' => 'no')
 
             );
         }
@@ -406,15 +459,19 @@ function woocommerce_mondido_init() {
                 $c_item["image"] = $this->get_img_url($prod->get_image());
                 $c_item["weight"] = $prod->get_weight();
                 $c_item["vat"] = number_format($item['line_tax'], 2, '.', '');
-                $items_item["vat"] = number_format($item['line_tax'], 2, '.', '');
-
                 $c_item["amount"] = $prod->price;
-                $items_item["amount"] = $prod->price;
                 $c_item["shipping_class"] = $prod->shipping_class;
                 $c_item["name"] = $prod->post->post_title;
-                $items_item["name"] = $prod->post->post_title;
                 $c_item["url"] = $prod->post->guid;
 
+               //invoice item
+                $items_item["artno"] = $item['product_id'];
+                $items_item["vat"] = number_format($item['line_tax'], 2, '.', '');
+                $items_item["amount"] = number_format($order->order_total, 2, '.', '');
+                $items_item["description"] = $prod->post->post_title;
+                $items_item["qty"] = $item['quantity'];
+                $items_item["unit_price"] = number_format($item['line_total'], 2, '.', '');
+                $items_item["discount"] = 0;
 
                 array_push($products,$c_item);
                 array_push($items,$items_item);
@@ -587,7 +644,7 @@ HTML;
         }
         
         public static function marketing_footer($msg=null){
-            if($_REQUEST['mondido_msg_holder'] != null){
+            if(isset($_REQUEST['mondido_msg_holder'])){
                 echo $_REQUEST['mondido_msg_holder'];
             }else{
                 echo '<script type="text/javascript" src="https://cdn-02.mondido.com/www/js/os-shop-v1.js"></script>';
