@@ -3,6 +3,12 @@ Mondido Payments
 WooCommerce plugin v2.5
 
 ## Changelog
+2016-04-14
+- Added settings for more payment methods
+- Added notification if API password is not set
+- Added ad-script to see google ads conversion
+- Updated metadata and items
+
 2016-03-11
 - Removed PHP notice warning
 - Added client and admin mail notifications
