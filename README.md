@@ -4,6 +4,7 @@ WooCommerce plugin v2.5
 
 ## Changelog
 2016-04-14
+- version 2.5
 - Added settings for more payment methods
 - Added notification if API password is not set
 - Added ad-script to see google ads conversion
