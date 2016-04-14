@@ -1,6 +1,6 @@
 Mondido Payments 
 =======================
-WooCommerce plugin v2.3
+WooCommerce plugin v2.5
 
 ## Changelog
 2016-03-11

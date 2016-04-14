@@ -3,7 +3,7 @@
   Plugin Name: Mondido Payments
   Plugin URI: https://www.mondido.com/
   Description: Mondido Payment plugin for WooCommerce
-  Version: 2.4
+  Version: 2.5
   Author: Mondido Payments
   Author URI: https://www.mondido.com
  */
@@ -114,7 +114,7 @@ function woocommerce_mondido_init() {
             );
             global $woocommerce;
             $this->selected_currency	= '';
-            $this->plugin_version = "2.0";
+            $this->plugin_version = "2.5";
 
             // Currency
             if ( isset($woocommerce->session->client_currency) ) {
@@ -309,10 +309,14 @@ function woocommerce_mondido_init() {
                 if($t != null && $t['status'] == 'approved'){
                     $order->update_status('processing', __( 'Mondido payment captured!', 'woocommerce' ));
                 }
-                echo json_decode($response['body'],true)['description'];
+                $res = json_decode($response['body'],true);
+                
+                if($res['description']){
+                    echo $res['description'];
+                }
                 wp_die();
             }
-            $this->store_transaction($_POST['id'],$response['body']);
+            $mondido->store_transaction($_POST['id'],$response['body']);
 
             $transaction = json_decode($response['body'],true);
             if($transaction['status'] == 'approved'){
@@ -507,18 +511,19 @@ function woocommerce_mondido_init() {
          * Receipt Page
          */
 
-        public function receipt_page($order) {
-            $js = <<<EOT
-            <script>
-            var mondido_submit = false;
-            if(window.location.hash != '#paying'){
-                mondido_submit = true;
-                window.location.hash = 'paying';
-            }else{
-                window.history.go(-2);
-            }
-            </script>
-EOT;
+        function receipt_page($order) {
+            
+$js = <<< HTML
+<script>
+var mondido_submit = false;
+if(window.location.hash != '#paying'){
+    mondido_submit = true;
+    window.location.hash = 'paying';
+}else{
+    window.history.go(-2);
+}
+</script>
+HTML;
             $spinner = '<img src="https://mondido.s3.amazonaws.com/www/img/ring-alt.gif" style="position:fixed;top:50%;left:50%;transform:translate(-50%, -50%);">';
             echo '<div style="position:fixed;z-index:1000;top:0px;left:0px;height:100%;width:100%;background-color:#e8e8e8;">' .$spinner. '</div>'.$js;
             echo $this->generate_mondido_form($order);
@@ -581,10 +586,23 @@ EOT;
             }
         }
         
-        public static function marketing_footer(){
-            echo '<script type="text/javascript" src="https://cdn-02.mondido.com/www/js/os-shop-v1.js"></script>';
+        public static function marketing_footer($msg=null){
+            if($_REQUEST['mondido_msg_holder'] != null){
+                echo $_REQUEST['mondido_msg_holder'];
+            }else{
+                echo '<script type="text/javascript" src="https://cdn-02.mondido.com/www/js/os-shop-v1.js"></script>';
+            }
+            
         }   
-        
+
+        public static function notification($msg){
+            $output = str_replace(array("\r", "\n"), "", $msg);
+            if(preg_match("/access denied/i", $msg, $matches)){
+                 $output =  $output.', probably is the Mondido API password not correct in the settings.';
+            }    
+            $str = '<script type="text/javascript">alert("'.$output.'");</script>';
+            $_REQUEST['mondido_msg_holder'] = $str;
+        }           
         /*
          * Check for valid mondido server callback
          */
@@ -610,8 +628,7 @@ EOT;
             do_action("valid-mondido-callback", $_GET);
         }
 
-        public function CallAPI($method, $url, $data = false, $username_pass)
-        {
+        public function CallAPI($method, $url, $data = false, $username_pass){
             $headers = array(
                 "Authorization" => "Basic " . base64_encode($username_pass),
                 "Content-type" => "application/x-www-form-urlencoded"
@@ -624,8 +641,8 @@ EOT;
             );
 
             if ( $result['response']['code'] != 200 ) {
+                $this->notification($result['body']);
                 return array('error' => true, 'status' => $result['headers']['status'], 'body' => $result['body']);
-                $error_message = $result->get_error_message();
             }
 
             return array('error' => false, 'status' => $result['headers']['status'], 'body' => $result['body']);
@@ -655,6 +672,8 @@ EOT;
 
             // If payment was success
             $status = $posted['status'];
+            //store transaction here !!!!
+            
             if ($status == 'approved'  || $status == 'authorized' ) {
                 $order = new WC_Order((int) $posted["payment_ref"]);
 //                do_action('woocommerce_order_status_pending_to_completed', $order->id );
