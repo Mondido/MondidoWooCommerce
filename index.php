@@ -17,6 +17,87 @@ add_action( 'admin_footer', 'my_action_javascript' ); // Write our JS below here
 add_action( 'wp_ajax_my_action', array('WC_Gateway_Mondido','my_action_callback'));
 add_action( 'init', 'plugin_init' );
 add_action( 'wp_footer', array( 'WC_Gateway_Mondido', 'marketing_footer' ) );
+add_action( 'woocommerce_product_options_pricing', 'wc_rrp_product_field' );	
+
+//subscriptions
+//add_action( 'woocommerce_process_product_meta', 'woo_add_custom_general_fields_save' );
+//add_filter( 'woocommerce_cart_needs_payment', 'filter_woocommerce_cart_needs_payment', 10, 2 ); 
+//add_filter( 'woocommerce_order_needs_payment', 'filter_woocommerce_order_needs_payment', 10, 3 ); 
+
+function filter_woocommerce_order_needs_payment( $needs_payment, $instance, $valid_order_statuses ) { 
+ if( $needs_payment == false ) 
+     {
+        global $woocommerce;
+        $prods = $woocommerce->cart->cart_contents;
+        foreach($prods as $item)
+        {
+             $plan_id = get_post_meta($item['product_id'], '_plan_id', true );
+             if( intval($plan_id) > 0 )
+             {
+                 return true;
+             }
+        }
+        return $needs_payment; //true if payment should always be visible
+         
+     }
+     else
+     {
+         return $needs_payment;
+     }
+}; 
+function filter_woocommerce_cart_needs_payment( $this_total_0, $instance ) 
+{ 
+    // if cart amount > 0 OR product has _plan_id return true else return $this_total_0
+     if( $this_total_0 == false ) 
+     {
+        global $woocommerce;
+        $prods = $woocommerce->cart->cart_contents;
+        foreach($prods as $item)
+        {
+             $plan_id = get_post_meta($item['product_id'], '_plan_id', true );
+             if( intval($plan_id) > 0 )
+             {
+                 return true;
+             }
+        }
+        return $this_total_0; //true if payment should always be visible
+         
+     }
+     else
+     {
+         return $this_total_0;
+     }
+}
+function wc_rrp_product_field() 
+{
+    $mondido = new WC_Gateway_Mondido();
+    $plans = $mondido->fetch_plans_from_API();
+   $options = Array();
+   $plan_id = get_post_meta( get_the_ID(), '_plan_id', true );
+    $options[0] = 'No subscription';
+     foreach($plans as $item){
+        $options[$item['id']] = __( $item['name'], 'woocommerce' );
+     }
+    woocommerce_wp_select( 
+        array( 
+            'id'      => '_plan_id', 
+            'value' => (string) $plan_id,
+            'label'   => __( 'Subscription plan', 'woocommerce' ), 
+            'options' => $options
+            )
+        );	
+}
+
+function woo_add_custom_general_fields_save( $post_id )
+{
+	// update subscription plan id
+	$woocommerce_select = $_POST['_plan_id'];
+	if( !empty( $woocommerce_select ) )
+    {
+		update_post_meta( $post_id, '_plan_id', esc_attr( $woocommerce_select ) );
+    }
+}
+
 function plugin_init() {
     // localization in the init action for WPML support
     load_plugin_textdomain( 'mondido', false, dirname( plugin_basename( __FILE__ ) ) . '/languages' );
@@ -202,6 +283,18 @@ function woocommerce_mondido_init() {
         /*
          * Function for get settings variabler in hash functions.
          */
+        function fetch_plans_from_API(){
+            $response = $this->CallAPI('GET','https://api.mondido.com/v1/plans',null,$this->get_merchant_id().':'.$this->get_password());
+            if($response['error']){
+                $log = new WC_Logger();
+                $log->add( 'mondido get plans error', $response );
+                return null;
+            }else{
+                $json_data = json_decode($response['body'],true);
+                return $json_data;
+            }
+            return null;
+        }
 
 
         function fetch_transaction_from_API($transaction_id, $post_id){
@@ -427,7 +520,11 @@ function woocommerce_mondido_init() {
             $google = [];
             $cart = $woocommerce->cart->cart_contents;
             $crt = $woocommerce->cart;
-            if(isset($_COOKIE['m_ad_code'])) {
+            $vat_amount = $crt->tax_total;
+            $vat_amount = number_format($vat_amount, 2, '.', '');
+            
+            if(isset($_COOKIE['m_ad_code'])) 
+            {
                 $google["ad_code"] = $_COOKIE['m_ad_code'];
             }
             if(isset($_COOKIE['m_ref_str'])) {
@@ -440,10 +537,10 @@ function woocommerce_mondido_init() {
             
             $shipping["amount"] = $shipping_total;
             $shipping["artno"] = 0;
-            $shipping["vat"] = ($crt->shipping_tax_total / $shipping_total) *100;
+            $shipping["vat"] = ($shipping_total / $crt->shipping_tax_total) *100;
             $shipping["unit_price"] = $shipping_total;
             $shipping["discount"] = 0;
-            $shipping["qty"] = 1;
+            $shipping["qty"] = 0;
 
             array_push($items,$shipping);
             if($crt->discount_cart != ''){
@@ -454,6 +551,7 @@ function woocommerce_mondido_init() {
             }
 
             #vat weight attributes
+            $has_plan_id = false;
             foreach($cart as $item){
                 $c_item = [];
                 $items_item = [];
@@ -461,7 +559,21 @@ function woocommerce_mondido_init() {
                 $c_item["id"] = $item['product_id'];
                 $c_item["quantity"] = $item['quantity'];
                 $c_item["total_amount"] = number_format($item['line_total'], 2, '.', '');
-
+                if($has_plan_id == false)
+                {    
+                    $plan_id = get_post_meta( $item["product_id"], '_plan_id', true );
+                    if(intval($plan_id) > 0)
+                    {
+                        $has_plan_id = true;
+                        $c_item["plan_id"] = $plan_id; 
+                        $c_item["product_type"] = 'recurring'; 
+                        
+                    }
+                    else 
+                    {
+                        $c_item["product_type"] = 'normal'; 
+                    }
+                }
                 $prod = new WC_Product($item["product_id"]);
 
                 $c_item["image"] = $this->get_img_url($prod->get_image());
@@ -497,6 +609,7 @@ function woocommerce_mondido_init() {
             $platform["plugin_version"] = $this->plugin_version;
             $order = new WC_Order( $order_id );
 
+            $customer["id"] = get_current_user_id();
             $customer["country"] = $order->billing_country;
             $customer["city"] = $order->billing_city;
             $customer["zip"] = $order->billing_postcode;
@@ -530,10 +643,14 @@ function woocommerce_mondido_init() {
             $amount = number_format($order->order_total, 2, '.', '');
             $merchant_id = trim($this->merchant_id);
             $currency = trim($this->currency);
-            $customer_id = '';
+            $customer_id = $order->get_user_id();
+            if($customer_id == '0'){
+                $customer_id = '';
+            }
             $hash = generate_mondido_hash($order_id);
             $mondido_args = array(
                 'amount' => $amount,
+                'vat_amount' => $vat_amount,
                 'merchant_id' => $merchant_id,
                 'currency' => $currency,
                 'customer_ref' => $customer_id,
@@ -544,6 +661,7 @@ function woocommerce_mondido_init() {
                 'metadata' => $metadata,
                 'test' => $this->test,
                 'authorize' => $this->authorize,
+                'plan_id' => $plan_id,
                 'items' => json_encode($items)
 
             );
@@ -602,14 +720,15 @@ HTML;
         public function parse_webhook($transaction, $mondido){
             $trans = $mondido->get_transaction($transaction["payment_ref"]);
             //check if we have the same transaction
-            if($trans != null && $transaction['id'] == $trans['id']){
+            if($trans != null && $transaction['id'] == $trans['id'])
+            {
                 $hash = generate_mondido_hash($transaction["payment_ref"],true, $transaction['status']);
                 if($hash == $transaction['response_hash']){ //hash is valid
 
                     //check status updates
                     $status = $transaction['status'];
                     $order = new WC_Order((int) $transaction["payment_ref"]);
-                    if($status == 'approved'){
+                    if($status == 'approved' || $status == 'authorized' ){
                         $order->add_order_note( sprintf( __( 'Webhook callback transaction approved %s ', 'woocommerce' ), $transaction['id'] ));
 
                         $order->payment_complete();
@@ -653,6 +772,41 @@ HTML;
                         $order->add_order_note( sprintf( __( 'Webhook callback updated shipping address %s ', 'woocommerce' ), $transaction['id'] ));
                     }
 
+                }
+            }
+            else
+            {
+                if($transaction['transaction_type'] == 'recurring')
+                {
+                    $status = $transaction['status'];
+                    $ts = 'failed';
+                    if( $status == 'approved' )
+                    {
+                        $ts = 'completed';
+                    }
+                    $customer_id = $transaction['metadata']['customer']['id'];
+                     $order_data = array(
+                        'status'        => $ts,
+                        'customer_id'   => $customer_id,
+                        'customer_note' => '',
+                        'total'         => $transaction['amount'],
+                        'created_via'   => 'Mondido',
+                        
+                    );
+                    //get recurringproduct id
+                    //get subtotal and total
+
+                    $pid = 129;
+                    $_SERVER['REMOTE_ADDR'] = '127.0.0.1'; // Required, else wc_create_order throws an exception
+                    $order  = wc_create_order( $order_data );
+                    $order->add_order_note( sprintf( __( 'Webhook callback created recurring order %s ', 'woocommerce' ), $transaction['id'] ));
+                    $price_params = array( 'totals' => array( 'subtotal' => 0, 'total' => $transaction['amount'] ) );
+
+                    $order->add_product( get_product( $pid ), $item['quantity'], $price_params ); 
+                    $this->store_transaction($order->id,$response['body']);
+                    echo 'ok';
+                    http_response_code(200);
+                    die();
                 }
             }
         }
@@ -756,8 +910,14 @@ HTML;
                         return;
                     }
                 }
+                $is_bad = true;
+                if($order->post_status == "wc-pending" || $order->post_status == 'wc-failed')
+                {
+                    $is_bad = false;
+                }
                 // if order is not pending, die()
-                if($order->post_status != "wc-pending" ){
+                if($is_bad)
+                {
                     $message = __(
                         sprintf("Invalid Callback for Order #%s."
                             . " Status is not pending."
@@ -842,7 +1002,10 @@ HTML;
         $amount = number_format($order->order_total, 2, '.', '');
         $merchant_id = trim($mondido->get_merchant_id());
         $secret = trim($mondido->get_secret());
-        $customer_id = '';
+        $customer_id = $order->get_user_id();
+        if($customer_id == '0'){
+                $customer_id = '';
+        }
         $currency = strtolower($mondido->get_currency());
         $test = ((string)$mondido->get_test() == 'true') ? 'test' : '';
 

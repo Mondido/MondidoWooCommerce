@@ -1,8 +1,13 @@
 Mondido Payments 
 =======================
-WooCommerce plugin v2.5
+WooCommerce plugin v2.6
 
 ## Changelog
+2016-06-02
+- version 2.6
+- Fixed vat_amount and customer_ref for order
+
+
 2016-04-14
 - version 2.5
 - Added settings for more payment methods
