@@ -5,6 +5,10 @@ WooCommerce plugin v2.6
 FAQ: https://github.com/Mondido/WooCommerce/wiki/FAQ   
 
 ## Changelog
+2016-06-15
+- version 3
+- Subscriptions
+
 2016-06-02
 - version 2.6
 - Fixed vat_amount and customer_ref for order
