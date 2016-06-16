@@ -19,9 +19,10 @@ add_action( 'wp_footer', array( 'WC_Gateway_Mondido', 'marketing_footer' ) );
 add_action( 'woocommerce_product_options_pricing', 'wc_rrp_product_field' );	
 //subscriptions
 add_action( 'woocommerce_process_product_meta', 'woo_add_custom_general_fields_save' );
-add_filter( 'woocommerce_cart_needs_payment', 'filter_woocommerce_cart_needs_payment', 10, 2 ); 
-add_filter( 'woocommerce_order_needs_payment', 'filter_woocommerce_order_needs_payment', 10, 3 ); 
-function filter_woocommerce_order_needs_payment( $needs_payment, $instance, $valid_order_statuses ) { 
+add_filter( 'woocommerce_cart_needs_payment', 'cart_needs_payment_filter', 10, 2 ); 
+add_filter( 'woocommerce_order_needs_payment', 'order_needs_payment_filter', 10, 3 ); 
+
+function order_needs_payment_filter( $needs_payment, $instance, $valid_order_statuses ) { 
  if( $needs_payment == false ) 
      {
         global $woocommerce;
@@ -41,7 +42,7 @@ function filter_woocommerce_order_needs_payment( $needs_payment, $instance, $val
          return $needs_payment;
      }
 }; 
-function filter_woocommerce_cart_needs_payment( $this_total_0, $instance ) 
+function cart_needs_payment_filter( $this_total_0, $instance ) 
 { 
     // if cart amount > 0 OR product has _plan_id return true else return $this_total_0
      if( $this_total_0 == false ) 
