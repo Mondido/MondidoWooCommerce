@@ -723,7 +723,7 @@ HTML;
                     WC()->mailer()->emails['WC_Email_New_Order']->trigger($order->id);
                 }
             }
-            echo 'ok';
+            echo 'ok'; 
             http_response_code(200);
             die();
         }
