@@ -575,9 +575,10 @@ function woocommerce_mondido_init() {
             }
             $webhook = [
                 'url' => $this->get_return_url($order),
-                'trigger' => 'payment_success',
+                'trigger' => 'payment',
                 'http_method' => 'post',
-                'data_format' => 'json'
+                'data_format' => 'json',
+                'type' => 'CustomHttp'
             ];
             $hash = generate_mondido_hash($order_id);
             $mondido_args = array(
@@ -712,14 +713,16 @@ HTML;
                         'customer_id'   => $customer_id,
                         'customer_note' => '',
                         'total'         => $transaction['amount'],
-                        'created_via'   => 'Mondido',
+                        'created_via'   => 'mondido',
                     );
                     //get subtotal and total
                     $prods = $transaction['metadata']['products'];
                     $pid = 0;
+                    $qty = 1;
                     foreach($prods as $p) {
                         if( $p['product_type'] == 'recurring' ){
                             $pid = $p['id'];
+                            $qty = $p['quantity'];
                         } 
                     }
                     $_SERVER['REMOTE_ADDR'] = '127.0.0.1'; // Required, else wc_create_order throws an exception
@@ -729,7 +732,7 @@ HTML;
                     $price_params = array( 'totals' => array( 'subtotal' => $transaction['amount'], 'total' => $transaction['amount'] ) );
                     $address = $this->get_address_from_transaction($transaction);
                     $order->set_address( $address, 'shipping' );
-                    $order->add_product( get_product( $pid ), 1, $price_params ); 
+                    $order->add_product( get_product( $pid ), $qty, $price_params ); 
                     $order->set_total($transaction['amount'], 'total');
                     $this->store_transaction($order->id,json_encode($transaction));
                     if(floatval($transaction['amount']) > 0)
