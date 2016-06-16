@@ -487,6 +487,7 @@ function woocommerce_mondido_init() {
             }
             #vat weight attributes
             $has_plan_id = false;
+            $subscription_quantity = 1;
             foreach($cart as $item){
                 $c_item = [];
                 $items_item = [];
@@ -501,6 +502,7 @@ function woocommerce_mondido_init() {
                         $has_plan_id = true;
                         $c_item["plan_id"] = $plan_id; 
                         $c_item["product_type"] = 'recurring'; 
+                        $subscription_quantity = $item['quantity'];
                     }
                     else 
                     {
@@ -571,6 +573,12 @@ function woocommerce_mondido_init() {
             if($customer_id == '0'){
                 $customer_id = '';
             }
+            $webhook = [
+                'url' => $this->get_return_url($order),
+                'trigger' => 'payment_success',
+                'http_method' => 'post',
+                'data_format' => 'json'
+            ];
             $hash = generate_mondido_hash($order_id);
             $mondido_args = array(
                 'amount' => $amount,
@@ -586,7 +594,9 @@ function woocommerce_mondido_init() {
                 'test' => $this->test,
                 'authorize' => $this->authorize,
                 'plan_id' => $plan_id,
-                'items' => json_encode($items)
+                'items' => json_encode($items),
+                'subscription_quantity' => $subscription_quantity,
+                'webhook' => json_encode($webhook)
             );
             $mondido_args_array = array();
             foreach ($mondido_args as $key => $value) {
@@ -704,9 +714,14 @@ HTML;
                         'total'         => $transaction['amount'],
                         'created_via'   => 'Mondido',
                     );
-                    //get recurringproduct id
                     //get subtotal and total
-                    $pid = 129;
+                    $prods = $transaction['metadata']['products'];
+                    $pid = 0;
+                    foreach($prods as $p) {
+                        if( $p['product_type'] == 'recurring' ){
+                            $pid = $p['id'];
+                        } 
+                    }
                     $_SERVER['REMOTE_ADDR'] = '127.0.0.1'; // Required, else wc_create_order throws an exception
                     $order  = wc_create_order( $order_data );
                     add_post_meta($order->id, '_payment_method', 'mondido' );
