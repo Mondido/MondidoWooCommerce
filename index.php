@@ -3,7 +3,7 @@
   Plugin Name: Mondido Payments
   Plugin URI: https://www.mondido.com/
   Description: Mondido Payment plugin for WooCommerce
-  Version: 3.0
+  Version: 3.1
   Author: Mondido Payments
   Author URI: https://www.mondido.com
  */
@@ -17,10 +17,40 @@ add_action( 'wp_ajax_my_action', array('WC_Gateway_Mondido','my_action_callback'
 add_action( 'init', 'plugin_init' );
 add_action( 'wp_footer', array( 'WC_Gateway_Mondido', 'marketing_footer' ) );
 add_action( 'woocommerce_product_options_pricing', 'wc_rrp_product_field' );	
+add_filter( 'woocommerce_order_button_html', 'mondido_order_button_html', 10, 3 ); 
 //subscriptions
 add_action( 'woocommerce_process_product_meta', 'woo_add_custom_general_fields_save' );
 add_filter( 'woocommerce_cart_needs_payment', 'cart_needs_payment_filter', 10, 2 ); 
 add_filter( 'woocommerce_order_needs_payment', 'order_needs_payment_filter', 10, 3 ); 
+
+
+function mondido_order_button_html() {
+    $mondido = new WC_Gateway_Mondido();
+    $btn = '<input type="submit" class="button alt" name="woocommerce_checkout_place_order" id="place_order" value="' . esc_attr( $mondido->order_button_text ) . '" data-value="' . esc_attr( $mondido->order_button_text ) . '" />';
+    $icons = '';
+    foreach($mondido->payment_methods as $method){
+        $icons .= '<img src="https://cdn-02.mondido.com/www/img/woo/'.$method.'.png" class="mondido-paymentmethod" alt="Pay with '.$method.'on Mondido">';
+    }
+    if(array_key_exists('iconcss', $mondido->settings)){
+        $css = '<style>'.$mondido->settings['iconcss'].'</style>';
+    }else{
+    $css = <<<EOT
+<style>
+    .mondido-logos {
+        margin-bottom: 8px;
+    }
+    .mondido-logos img{
+        margin-right: 8px;
+        width: 64px;
+        border: solid 1px gray;
+        border-radius: 4px;
+    }
+</style>
+EOT;
+        
+    }
+    return $css.'<div class="mondido-logos">'.$icons.'</div>'.$btn;
+}
 
 function order_needs_payment_filter( $needs_payment, $instance, $valid_order_statuses ) { 
  if( $needs_payment == false ) 
@@ -68,8 +98,8 @@ function wc_rrp_product_field()
 {
     $mondido = new WC_Gateway_Mondido();
     $plans = $mondido->fetch_plans_from_API();
-   $options = Array();
-   $plan_id = get_post_meta( get_the_ID(), '_plan_id', true );
+    $options = Array();
+    $plan_id = get_post_meta( get_the_ID(), '_plan_id', true );
     $options[0] = 'No subscription';
      foreach($plans as $item){
         $options[$item['id']] = __( $item['name'], 'woocommerce' );
@@ -166,6 +196,7 @@ function woocommerce_mondido_init() {
     class WC_Gateway_Mondido extends WC_Payment_Gateway {
         public function __construct()
         {
+            $this->payment_methods = array();
             $this->view_transaction_url = 'https://admin.mondido.com/transactions/%s';
             $this->supports = array(
                         'products',
@@ -173,7 +204,7 @@ function woocommerce_mondido_init() {
                     );
             global $woocommerce;
             $this->selected_currency = '';
-            $this->plugin_version = "3.0";
+            $this->plugin_version = "3.1";
             // Currency
             if ( isset($woocommerce->session->client_currency) ) {
                 // If currency is set by WPML
@@ -200,27 +231,37 @@ function woocommerce_mondido_init() {
             $payment_options = '';
             if($this->settings['visa-mc'] == 'yes'){
                 $payment_options = 'Visa, MasterCard';
+                array_push($this->payment_methods,"visa","mastercard");
             }
             if($this->settings['amex'] == 'yes'){
                 $payment_options = $payment_options.', Amex';
+                array_push($this->payment_methods,"amex");
             }
             if($this->settings['diners'] == 'yes'){
                 $payment_options = $payment_options.', Diners';
+                array_push($this->payment_methods,"diners");
             }
             if($this->settings['swish'] == 'yes'){
                 $payment_options = $payment_options.', Swish';
+                array_push($this->payment_methods,"swish");
             }
             if($this->settings['bank'] == 'yes'){
                 $payment_options = $payment_options.', Bank';
+                array_push($this->payment_methods,"bank");
             }
             if($this->settings['invoice'] == 'yes'){
                 $payment_options = $payment_options.', Faktura';
-            }
+                 array_push($this->payment_methods,"invoice");
+           }
+            if(array_key_exists('paypal', $this->settings) && $this->settings['paypal'] == 'yes'){
+                $payment_options = $payment_options.', PayPal';
+                 array_push($this->payment_methods,"paypal");
+           }
             if(substr( $payment_options, 0, 2 ) === ", "){
                 $payment_options = substr($payment_options, 2);
             }
-            $this->title = $payment_options;
-            $this->description = __('Pay securely by Credit or Debit card through Mondido.', 'mondido');
+            $this->title = 'Mondido Payments';
+            $this->description = $payment_options;
             $this->merchant_id = $this->settings['merchant_id'];
             $this->secret = $this->settings['secret'];
             $this->password = $this->settings['password'];
@@ -278,7 +319,9 @@ function woocommerce_mondido_init() {
         function get_transaction($id){
             $t = get_post_meta( $id, 'mondido-transaction-data' );
             if(count($t) > 0){
-                return json_decode($t[0],true);
+                $jsonData = rtrim($t[0], "\0");
+                $jsonData = preg_replace( "/.?payment_response..(.*),.id.?/", "\"id\"", $jsonData); // strip payment_response to keep it from breaking
+                return json_decode($jsonData,true);
             }
             return null;
         }
@@ -304,6 +347,18 @@ function woocommerce_mondido_init() {
          * Initialise settings form fields
          */
         function init_form_fields() {
+                $css = <<<EOT
+.mondido-logos {
+    margin-bottom: 8px;
+}
+.mondido-logos img{
+    margin-right: 8px;
+    width: 64px;
+    border: solid 1px gray;
+    border-radius: 4px;
+}
+EOT;
+
             $this->form_fields = array(
                 'enabled' => array(
                     'title' => __('Enable/Disable', 'mondido'),
@@ -360,10 +415,21 @@ function woocommerce_mondido_init() {
                     'label' => '',
                     'default' => 'no'),
                 'invoice' => array(
-                    'title' => __('Faktura', 'mondido'),
+                    'title' => __('Faktura/Delbetalning', 'mondido'),
                     'type' => 'checkbox',
                     'label' => '',
-                    'default' => 'no')
+                    'default' => 'no'),
+                 'paypal' => array(
+                    'title' => __('PayPal', 'mondido'),
+                    'type' => 'checkbox',
+                    'label' => '',
+                    'default' => 'no'),
+                 'iconcss' => array(
+                    'title' => __('CSS', 'mondido'),
+                    'type' => 'textarea',
+                    'label' => 'CSS for payment methods',
+                    'default' => $css),
+                    
             );
         }
         /*
