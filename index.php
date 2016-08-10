@@ -3,7 +3,7 @@
   Plugin Name: Mondido Payments
   Plugin URI: https://www.mondido.com/
   Description: Mondido Payment plugin for WooCommerce
-  Version: 3.1
+  Version: 3.2
   Author: Mondido Payments
   Author URI: https://www.mondido.com
  */
@@ -53,25 +53,26 @@ EOT;
 }
 
 function order_needs_payment_filter( $needs_payment, $instance, $valid_order_statuses ) { 
- if( $needs_payment == false ) 
-     {
+    if( $needs_payment == false ) 
+    {
         global $woocommerce;
         $prods = $woocommerce->cart->cart_contents;
         foreach($prods as $item)
         {
-             $plan_id = get_post_meta($item['product_id'], '_plan_id', true );
-             if( intval($plan_id) > 0 )
-             {
-                 return true;
-             }
+                $plan_id = get_post_meta($item['product_id'], '_plan_id', true );
+                if( intval($plan_id) > 0 )
+                {
+                    return true;
+                }
         }
         return $needs_payment; //true if payment should always be visible
-     }
-     else
-     {
-         return $needs_payment;
-     }
-}; 
+    }
+    else
+    {
+        return $needs_payment;
+    }
+}
+
 function cart_needs_payment_filter( $this_total_0, $instance ) 
 { 
     // if cart amount > 0 OR product has _plan_id return true else return $this_total_0
@@ -101,9 +102,11 @@ function wc_rrp_product_field()
     $options = Array();
     $plan_id = get_post_meta( get_the_ID(), '_plan_id', true );
     $options[0] = 'No subscription';
-     foreach($plans as $item){
-        $options[$item['id']] = __( $item['name'], 'woocommerce' );
-     }
+    if($plans != null){
+        foreach($plans as $item){
+            $options[$item['id']] = __( $item['name'], 'woocommerce' );
+        }
+    }
     woocommerce_wp_select( 
         array( 
             'id'      => '_plan_id', 
@@ -204,7 +207,7 @@ function woocommerce_mondido_init() {
                     );
             global $woocommerce;
             $this->selected_currency = '';
-            $this->plugin_version = "3.1";
+            $this->plugin_version = "3.2";
             // Currency
             if ( isset($woocommerce->session->client_currency) ) {
                 // If currency is set by WPML
@@ -516,13 +519,13 @@ EOT;
         public function generate_mondido_form($order_id) {
             global $woocommerce;
             $order = new WC_Order($order_id);
-            $products = [];
-            $customer = [];
-            $platform = [];
-            $order_items = [];
-            $items = [];
-            $analytics = [];
-            $google = [];
+            $products = array();
+            $customer = array();
+            $platform = array();
+            $order_items = array();
+            $items = array();
+            $analytics = array();
+            $google = array();
             $cart = $woocommerce->cart->cart_contents;
             $crt = $woocommerce->cart;
             $vat_amount = $crt->tax_total;
@@ -535,7 +538,7 @@ EOT;
                 $analytics["referrer"] = $_COOKIE['m_ref_str'];
             }
             $analytics['google'] = $google;
-            $shipping = [];
+            $shipping = array();
             $shipping["description"] = "Shipping";
             $shipping_total = $crt->shipping_total + $crt->shipping_tax_total;
             $shipping["amount"] = $shipping_total;
@@ -546,7 +549,7 @@ EOT;
             $shipping["qty"] = 0;
             array_push($items,$shipping);
             if($crt->discount_cart != ''){
-                $discount = [];
+                $discount = array();
                 $discount["name"] = "Discount";
                 $discount["amount"] = number_format(0-($crt->discount_cart + $crt->discount_cart_tax), 2, '.', '');
                 array_push($items,$discount);
@@ -555,8 +558,8 @@ EOT;
             $has_plan_id = false;
             $subscription_quantity = 1;
             foreach($cart as $item){
-                $c_item = [];
-                $items_item = [];
+                $c_item = array();
+                $items_item = array();
                 $c_item["id"] = $item['product_id'];
                 $c_item["quantity"] = $item['quantity'];
                 $c_item["total_amount"] = number_format($item['line_total'], 2, '.', '');
@@ -615,9 +618,9 @@ EOT;
             $customer["first_name"] = $order->billing_first_name;
             $customer["last_name"] = $order->billing_last_name;
             $customer["phone"] = $order->billing_phone;
-            $coupons = [];
+            $coupons = array();
             foreach($crt->applied_coupons as $coupon){
-                $coup_item = [];
+                $coup_item = array();
                 $coup_item["code"] = $coupon;
                 array_push($coupons,$coup_item);
             }
