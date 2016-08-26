@@ -3,12 +3,13 @@
   Plugin Name: Mondido Payments
   Plugin URI: https://www.mondido.com/
   Description: Mondido Payment plugin for WooCommerce
-  Version: 3.2
+  Version: 3.3
   Author: Mondido Payments
   Author URI: https://www.mondido.com
  */
 // Actions
-add_action('plugins_loaded', 'woocommerce_mondido_init', 0);
+include 'log.php';
+add_action( 'plugins_loaded', 'woocommerce_mondido_init', 0);
 add_action('init', array('WC_Gateway_Mondido', 'check_mondido_response'));
 add_action('valid-mondido-callback', array('WC_Gateway_Mondido', 'successful_request'));
 add_action( 'add_meta_boxes', 'MY_order_meta_boxes' );
@@ -199,6 +200,7 @@ function woocommerce_mondido_init() {
     class WC_Gateway_Mondido extends WC_Payment_Gateway {
         public function __construct()
         {
+            $this->logger = new \MondidoBase\Log();
             $this->payment_methods = array();
             $this->view_transaction_url = 'https://admin.mondido.com/transactions/%s';
             $this->supports = array(
@@ -207,7 +209,7 @@ function woocommerce_mondido_init() {
                     );
             global $woocommerce;
             $this->selected_currency = '';
-            $this->plugin_version = "3.2";
+            $this->plugin_version = "3.3";
             // Currency
             if ( isset($woocommerce->session->client_currency) ) {
                 // If currency is set by WPML
@@ -218,7 +220,7 @@ function woocommerce_mondido_init() {
                 $this->selected_currency = strtoupper($plugin_instance->get_selected_currency());
             } else {
                 // WooCommerce selected currency
-                $this->selected_currency = get_option('woocommerce_currency');
+                $this->selected_currency = get_woocommerce_currency();
             }
             $this->id = 'mondido';
             $this->icon = "https://cdn-02.mondido.com/www/img/wp-mondido.png";
@@ -293,6 +295,9 @@ function woocommerce_mondido_init() {
          */
         function fetch_plans_from_API(){
             $response = $this->CallAPI('GET','https://api.mondido.com/v1/plans',null,$this->get_merchant_id().':'.$this->get_password());
+            $mid = $this->get_merchant_id();
+            
+            $this->logger->send(implode($response), "fetch_plans_from_API","Merchant $mid");
             if($response['error']){
                 $log = new WC_Logger();
                 $log->add( 'mondido get plans error', $response );
@@ -305,6 +310,8 @@ function woocommerce_mondido_init() {
         }
         function fetch_transaction_from_API($transaction_id, $post_id){
             $response = $this->CallAPI('GET','https://api.mondido.com/v1/transactions/'.$transaction_id,null,$this->get_merchant_id().':'.$this->get_password());
+            $mid  =$this->get_merchant_id();
+            $this->logger->send(implode(',',$response), "fetch_transaction_from_API","Merchant $mid");
             if($response['error']){
                 $log = new WC_Logger();
                 $log->add( 'mondido get transaction error', $response );
@@ -463,6 +470,8 @@ EOT;
             $order = new WC_Order((int) $_POST['id']);
             $data = array('amount' => number_format($order->order_total, 2, '.', ''));
             $response = $mondido->CallAPI('PUT','https://api.mondido.com/v1/transactions/'.$t['id'].'/capture',$data,$mondido->get_merchant_id().':'.$mondido->get_password());
+            $mid = $mondido->get_merchant_id();
+            $mondido->logger->send(implode($response), "capture_callback","Merchant $mid");
             if($response['error']){
                 $log = new WC_Logger();
                 $log->add( 'mondido capture', $response );
@@ -504,6 +513,8 @@ EOT;
             $amount = number_format($amount,2,'.','');
             $data = array('transaction_id' => $t['id'],'amount' => $amount,'reason' => $reason);
             $response = $this->CallAPI('POST','https://api.mondido.com/v1/refunds',$data,$this->get_merchant_id().':'.$this->get_password());
+            $mid = $this->get_merchant_id();
+            $this->logger->send("Refunded $amount", "process_refund","Merchant $mid");
             if($response['error']){
                 $log = new WC_Logger();
                 $log->add( 'mondido refund', $response );
@@ -731,6 +742,7 @@ HTML;
             return $address;
         }
         public function parse_webhook($transaction, $mondido){
+            $mondido->logger->send($transaction, "parse_webhook","Merchant $mondido->get_merchant_id()");
             $trans = $mondido->get_transaction($transaction["payment_ref"]);
             //check if this is already done!
             //check if we have the same transaction
@@ -758,11 +770,14 @@ HTML;
                         $order->update_status('on-hold', __( 'Mondido payment authorized!', 'woocommerce' ));
                         $order->add_order_note( sprintf( __( 'Webhook callback transaction authorized %s ', 'woocommerce' ), $transaction['id'] ));
                     }
+                    $mondido->logger->send("Updating to $status", "parse_webhook","Merchant $mondido->get_merchant_id()");
+
                     //check for new delivery address
                     if($transaction['payment_details']['city'] && $transaction['payment_details']['zip']){
                         $address = $this->get_address_from_transaction($transaction);
                         $order->set_address( $address, 'shipping' );
                         $order->add_order_note( sprintf( __( 'Webhook callback updated shipping address %s ', 'woocommerce' ), $transaction['id'] ));
+                        $mondido->logger->send("Webhook callback updated shipping address", "parse_webhook","Merchant $mondido->get_merchant_id()");
                     }
                 }
             }
@@ -794,6 +809,7 @@ HTML;
                             $qty = $p['quantity'];
                         } 
                     }
+                    $mondido->logger->send("Cerating order for recurring order: $order->id", "parse_webhook","Merchant $mondido->get_merchant_id()");
                     $_SERVER['REMOTE_ADDR'] = '127.0.0.1'; // Required, else wc_create_order throws an exception
                     $order  = wc_create_order( $order_data );
                     add_post_meta($order->id, '_payment_method', 'mondido' );
@@ -836,10 +852,19 @@ HTML;
         public static function check_mondido_response() {
             $raw_body = file_get_contents("php://input");
             $array = json_decode($raw_body,true);
+            $mondido = new WC_Gateway_Mondido();
             if($array['response_hash']){
-                $mondido = new WC_Gateway_Mondido();
+               
                 $mondido->parse_webhook($array,$mondido);
+                return;
             }
+            if($_REQUEST != null){
+               if(isset($_REQUEST['wc-ajax'])){
+                   return; //not a call we want to care about
+               }
+ 
+            }
+
             $_GET = stripslashes_deep($_GET);
             $expected_fields = array(
                 "hash",
@@ -847,7 +872,10 @@ HTML;
                 "transaction_id"
             );
             foreach($expected_fields as $field){
-                if(!isset($_GET[$field])) return;
+                if(!isset($_GET[$field])){
+                    $mid = $mondido->get_merchant_id();
+                    return;
+                } 
             }
             do_action("valid-mondido-callback", $_GET);
         }
@@ -883,18 +911,28 @@ HTML;
             //start
             global $woocommerce;
             $mondido = new WC_Gateway_Mondido();
+            $mid = $mondido->get_merchant_id();
+            $mondido->logger->send("Thank you page", "successful_request","Merchant $mid");
+            $mondido->logger->send(implode(',',$posted), "successful_request","Merchant $mid");
             $transaction = $mondido->fetch_transaction_from_API($posted['transaction_id'],$posted["payment_ref"]);
             // If payment was success
             $status = $posted['status'];
             //store transaction here !!!!
-            if ($status == 'approved'  || $status == 'authorized' ) {
+
+            if ($status == 'approved' || $status == 'authorized' ) {
                 $order = new WC_Order((int) $posted["payment_ref"]);
 //                do_action('woocommerce_order_status_pending_to_completed', $order->id );
                 // if order not exists, die()
-                if($order->post == null) return;
+                if($order->post == null){
+                    $mondido->logger->send("Did not find an order", "successful_request","Merchant $mid");
+                    return;
+                } 
                 $stored_status = get_post_meta( $order->id, 'mondido-transaction-status' );
                 if(count($stored_status) > 0){
                     if($stored_status[0] == 'approved' || $stored_status[0] == 'authorized'){
+                        $mid = $mondido->get_merchant_id();
+                        $ss = $stored_status[0];
+                        $mondido->logger->send("Order already approved or authorized with status $ss", "successful_request","Merchant $mid");
                         return;
                     }
                 }
@@ -906,6 +944,7 @@ HTML;
                 // if order is not pending, die()
                 if($is_bad)
                 {
+                    $mondido->logger->send("Invalid redirect for Order $order->id, Status is $order->post_status but should be wc-pending or wc-failed", "successful_request","Merchant $mid");
                     $message = __(
                         sprintf("Invalid redirect for Order #%s."
                             . " Status is not pending."
@@ -925,6 +964,7 @@ HTML;
                     $posted["status"]
                 );
                 if ($hash == $posted['hash']) {
+                    $mondido->logger->send("Successfull redirect order: $order->id", "successful_request","Merchant $mid");
                     $order->add_order_note(
                         __(
                             sprintf("Success: Redirect completed."
@@ -935,25 +975,32 @@ HTML;
                         )
                     );
                     if($status == 'authorized'){
+                        $mondido->logger->send("Settings order $order->id to Awaiting Mondido payment", "successful_request","Merchant $mid");
                         update_post_meta( $order->id, 'mondido-transaction-status', 'authorized' );
                         $order->update_status('on-hold', __( 'Awaiting Mondido payment', 'woocommerce' ));
+                        $mondido->logger->send("Sending WC_Email_Customer_Processing_Order for $order->id", "successful_request","Merchant $mid");
+                        WC()->mailer()->emails['WC_Email_Customer_Processing_Order']->trigger($order->id);
                         $order->reduce_order_stock();
+                        $mondido->logger->send("Sending WC_Email_New_Order for $order->id", "successful_request","Merchant $mid");
+                        WC()->mailer()->emails['WC_Email_New_Order']->trigger($order->id);
                     }elseif($status == 'approved'){
                         // Payment Complete
-                        // Reduce stock levels
                         update_post_meta( $order->id, 'mondido-transaction-status', 'approved' );
                         $order->reduce_order_stock();
                         $order->payment_complete($posted['transaction_id']);
                         if(floatval($transaction['amount']) > 0)
                         {
+                            $mondido->logger->send("Sending WC_Email_Customer_Processing_Order for $order->id", "successful_request","Merchant $mid");
                             WC()->mailer()->emails['WC_Email_Customer_Processing_Order']->trigger($order->id);
                         }
+                        $mondido->logger->send("Sending WC_Email_New_Order for $order->id", "successful_request","Merchant $mid");
                         WC()->mailer()->emails['WC_Email_New_Order']->trigger($order->id);
                     }
                     update_post_meta( $order->id, 'mondido-transaction-id', $posted['transaction_id'] );
                     // Remove cart
                     $woocommerce->cart->empty_cart();
                 } else {
+                    $mondido->logger->send("Failure. Callback completed for order $order->id, incorrect hash -- fake payment?", "successful_request","Merchant $mid");
                     $order->update_status('failed');
                     $order->add_order_note(
                         __(
@@ -1012,4 +1059,4 @@ HTML;
     if (is_admin()) {
         add_action('load-post.php', 'WC_Gateway_Mondido');
     }
-}?>
+}
