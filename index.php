@@ -635,13 +635,13 @@ EOT;
             $order_items["coupons"] = $coupons;
             $order_items["discount"] = $crt->discount_cart;
             $order_items["discount_vat"] = $crt->discount_cart_tax;
-            $md = [
+            $md = array(
                 "products" => $products,
                 "customer" => $customer,
                 "platform" => $platform,
                 "order" => $order_items,
                 "analytics" => $analytics
-            ];
+            );
             $metadata = json_encode($md);
             $amount = number_format($order->order_total, 2, '.', '');
             $merchant_id = trim($this->merchant_id);
@@ -650,13 +650,13 @@ EOT;
             if($customer_id == '0'){
                 $customer_id = '';
             }
-            $webhook = [
+            $webhook = array(
                 'url' => $this->get_return_url($order),
                 'trigger' => 'payment',
                 'http_method' => 'post',
                 'data_format' => 'json',
                 'type' => 'CustomHttp'
-            ];
+            );
             $hash = generate_mondido_hash($order_id);
             $mondido_args = array(
                 'amount' => $amount,
