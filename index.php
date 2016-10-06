@@ -3,7 +3,7 @@
   Plugin Name: Mondido Payments
   Plugin URI: https://www.mondido.com/
   Description: Mondido Payment plugin for WooCommerce
-  Version: 3.4.2
+  Version: 3.4.3
   Author: Mondido Payments
   Author URI: https://www.mondido.com
  */
@@ -179,7 +179,7 @@ function woocommerce_mondido_init() {
                     );
             global $woocommerce;
             $this->selected_currency = '';
-            $this->plugin_version = "3.4.2";
+            $this->plugin_version = "3.4.3";
             // Currency
             if ( isset($woocommerce->session->client_currency) ) {
                 // If currency is set by WPML
