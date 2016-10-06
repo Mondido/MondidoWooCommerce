@@ -170,6 +170,9 @@ function woocommerce_mondido_init() {
     class WC_Gateway_Mondido extends WC_Payment_Gateway {
         public function __construct()
         {
+            error_reporting(E_ALL);
+            ini_set('display_errors', 1);
+
             $this->logger = new \MondidoBase\Log();
             $this->payment_methods = array();
             $this->view_transaction_url = 'https://admin.mondido.com/transactions/%s';
