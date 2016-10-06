@@ -551,7 +551,11 @@ EOT;
             $shipping_total = $crt->shipping_total + $crt->shipping_tax_total;
             $shipping["amount"] = $shipping_total;
             $shipping["artno"] = 0;
-            $shipping["vat"] = ($shipping_total / $crt->shipping_tax_total) *100;
+            if($crt->shipping_tax_total > 0){
+                $shipping["vat"] = ($shipping_total / $crt->shipping_tax_total) *100;
+            }else{
+                $shipping["vat"] = 0;
+            }
             $shipping["unit_price"] = $shipping_total;
             $shipping["discount"] = 0;
             $shipping["qty"] = 0;
@@ -901,11 +905,15 @@ HTML;
             return array('error' => false, 'status' => $result['headers']['status'], 'body' => $result['body']);
         }
         function get_img_url($html){
-            $doc = new DOMDocument();
-            $doc->loadHTML($html);
-            $xpath = new DOMXPath($doc);
-            $src = $xpath->evaluate("string(//img/@src)");
-            return $src;
+            if(class_exists('DOMDocument')){
+                $doc = new DOMDocument();
+                $doc->loadHTML($html);
+                $xpath = new DOMXPath($doc);
+                $src = $xpath->evaluate("string(//img/@src)");
+                return $src;
+            }else{
+                return '';
+            }
         }
         /*
          * Successful Payment
