@@ -3,7 +3,7 @@
   Plugin Name: Mondido Payments
   Plugin URI: https://www.mondido.com/
   Description: Mondido Payment plugin for WooCommerce
-  Version: 3.4.3
+  Version: 3.4.4
   Author: Mondido Payments
   Author URI: https://www.mondido.com
  */
@@ -180,7 +180,7 @@ function woocommerce_mondido_init() {
                     );
             global $woocommerce;
             $this->selected_currency = '';
-            $this->plugin_version = "3.4.3";
+            $this->plugin_version = "3.4.4";
             // Currency
             if ( isset($woocommerce->session->client_currency) ) {
                 // If currency is set by WPML
@@ -553,7 +553,7 @@ EOT;
             $shipping["amount"] = $shipping_total;
             $shipping["artno"] = 0;
             if($crt->shipping_tax_total > 0){
-                $shipping["vat"] = ($shipping_total / $crt->shipping_tax_total) *100;
+                $shipping["vat"] = $crt->shipping_tax_total;//($shipping_total / $crt->shipping_tax_total) *100;
             }else{
                 $shipping["vat"] = 0;
             }
@@ -606,7 +606,7 @@ EOT;
                 $tax = $price_inc_tax - $price_ex_tax;
                 $tax_perc = ($tax / $price_inc_tax) * 100;
                 $qty = $item['quantity'];
-                $items_item["vat"] = number_format($tax_perc, 2, '.', '');
+                $items_item["vat"] = number_format($item['line_tax'], 2, '.', '');
                 $items_item["amount"] = number_format($price_inc_tax * $qty, 2, '.', '');
                 $items_item["description"] = $prod->post->post_title;
                 $items_item["qty"] = $item['quantity'];
