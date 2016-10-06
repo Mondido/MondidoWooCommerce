@@ -560,7 +560,9 @@ EOT;
             $shipping["unit_price"] = $shipping_total;
             $shipping["discount"] = 0;
             $shipping["qty"] = 0;
-            array_push($items,$shipping);
+            if($shipping_total > 0){
+                array_push($items,$shipping);
+            }
             if($crt->discount_cart != ''){
                 $discount = array();
                 $discount["name"] = "Discount";
