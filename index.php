@@ -198,7 +198,7 @@ function woocommerce_mondido_init() {
             $this->has_fields = false;
             $this->method_title = 'Mondido';
             $this->method_description = __('', 'mondido');
-            $this->order_button_text = __('Proceed to Mondido', 'woocommerce');
+            $this->order_button_text = __('Proceed to Mondido', 'mondido');
             $this->liveurl = 'https://pay.mondido.com/v1/form';
             // Load forms and settings
             $this->init_form_fields();
