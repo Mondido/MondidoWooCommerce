@@ -3,7 +3,7 @@
   Plugin Name: Mondido Payments
   Plugin URI: https://www.mondido.com/
   Description: Mondido Payment plugin for WooCommerce
-  Version: 3.4.2
+  Version: 3.4.4
   Author: Mondido Payments
   Author URI: https://www.mondido.com
  */
@@ -170,6 +170,7 @@ function woocommerce_mondido_init() {
     class WC_Gateway_Mondido extends WC_Payment_Gateway {
         public function __construct()
         {
+
             $this->logger = new \MondidoBase\Log();
             $this->payment_methods = array();
             $this->view_transaction_url = 'https://admin.mondido.com/transactions/%s';
@@ -179,7 +180,7 @@ function woocommerce_mondido_init() {
                     );
             global $woocommerce;
             $this->selected_currency = '';
-            $this->plugin_version = "3.4.2";
+            $this->plugin_version = "3.4.4";
             // Currency
             if ( isset($woocommerce->session->client_currency) ) {
                 // If currency is set by WPML
@@ -197,7 +198,7 @@ function woocommerce_mondido_init() {
             $this->has_fields = false;
             $this->method_title = 'Mondido';
             $this->method_description = __('', 'mondido');
-            $this->order_button_text = __('Proceed to Mondido', 'woocommerce');
+            $this->order_button_text = __('Proceed to Mondido', 'mondido');
             $this->liveurl = 'https://pay.mondido.com/v1/form';
             // Load forms and settings
             $this->init_form_fields();
@@ -551,11 +552,17 @@ EOT;
             $shipping_total = $crt->shipping_total + $crt->shipping_tax_total;
             $shipping["amount"] = $shipping_total;
             $shipping["artno"] = 0;
-            $shipping["vat"] = ($shipping_total / $crt->shipping_tax_total) *100;
+            if($crt->shipping_tax_total > 0){
+                $shipping["vat"] = $crt->shipping_tax_total;//($shipping_total / $crt->shipping_tax_total) *100;
+            }else{
+                $shipping["vat"] = 0;
+            }
             $shipping["unit_price"] = $shipping_total;
             $shipping["discount"] = 0;
             $shipping["qty"] = 0;
-            array_push($items,$shipping);
+            if($shipping_total > 0){
+                array_push($items,$shipping);
+            }
             if($crt->discount_cart != ''){
                 $discount = array();
                 $discount["name"] = "Discount";
@@ -601,7 +608,7 @@ EOT;
                 $tax = $price_inc_tax - $price_ex_tax;
                 $tax_perc = ($tax / $price_inc_tax) * 100;
                 $qty = $item['quantity'];
-                $items_item["vat"] = number_format($tax_perc, 2, '.', '');
+                $items_item["vat"] = number_format($item['line_tax'], 2, '.', '');
                 $items_item["amount"] = number_format($price_inc_tax * $qty, 2, '.', '');
                 $items_item["description"] = $prod->post->post_title;
                 $items_item["qty"] = $item['quantity'];
@@ -901,11 +908,15 @@ HTML;
             return array('error' => false, 'status' => $result['headers']['status'], 'body' => $result['body']);
         }
         function get_img_url($html){
-            $doc = new DOMDocument();
-            $doc->loadHTML($html);
-            $xpath = new DOMXPath($doc);
-            $src = $xpath->evaluate("string(//img/@src)");
-            return $src;
+            if(class_exists('DOMDocument')){
+                $doc = new DOMDocument();
+                $doc->loadHTML($html);
+                $xpath = new DOMXPath($doc);
+                $src = $xpath->evaluate("string(//img/@src)");
+                return $src;
+            }else{
+                return '';
+            }
         }
         /*
          * Successful Payment
