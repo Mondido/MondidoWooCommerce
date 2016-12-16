@@ -3,7 +3,7 @@
   Plugin Name: Mondido Payments
   Plugin URI: https://www.mondido.com/
   Description: Mondido Payment plugin for WooCommerce
-  Version: 3.4.4
+  Version: 3.4.5
   Author: Mondido Payments
   Author URI: https://www.mondido.com
  */
@@ -25,6 +25,130 @@ add_filter( 'woocommerce_cart_needs_payment', 'cart_needs_payment_filter', 10, 2
 add_filter( 'woocommerce_order_needs_payment', 'order_needs_payment_filter', 10, 3 ); 
 
 
+function create_mondido_product($product_name, $product_price, $product_id = 0)
+{
+    if($product_id > 0) //if product already defined in woocommerce and mondido know the product id
+    {
+        $product = wc_get_product($product_id);
+    }
+    else //product is not defined in woocommerce and mondido does not know the product id
+    {
+        $page = get_page_by_title($product_name, OBJECT, 'product');
+        $product = wc_get_product($page->ID);
+    }
+    $post_id = 0;
+    if(!isset($product)) //if the product does not exist we need to create it 
+    {
+        $post = array(
+            'post_author' => 1,
+            'post_content' => '',
+            'post_status' => "publish",
+            'post_title' => $product_name,
+            'post_parent' => '',
+            'post_type' => "product",
+        );
+
+        $product_id = wp_insert_post($post);
+
+        wp_set_object_terms($product_id, 'simple', 'product_type');
+        update_post_meta( $product_id, '_visibility', 'hidden' );
+        update_post_meta( $product_id, '_stock_status', 'instock');
+        update_post_meta( $product_id, 'total_sales', '0');
+        update_post_meta( $product_id, '_downloadable', 'no');
+        update_post_meta( $product_id, '_virtual', 'yes');
+        update_post_meta( $product_id, '_sale_price', "" );
+        update_post_meta( $product_id, '_purchase_note', "" );
+        update_post_meta( $product_id, '_featured', "no" );
+        update_post_meta( $product_id, '_weight', "" );
+        update_post_meta( $product_id, '_length', "" );
+        update_post_meta( $product_id, '_width', "" );
+        update_post_meta( $product_id, '_height', "" );
+        update_post_meta( $product_id, '_sku', "");
+        update_post_meta( $product_id, '_product_attributes', array());
+        update_post_meta( $product_id, '_sale_price_dates_from', "" );
+        update_post_meta( $product_id, '_sale_price_dates_to', "" );
+        update_post_meta( $product_id, '_sold_individually', "" );
+        update_post_meta( $product_id, '_manage_stock', "no" );
+        update_post_meta( $product_id, '_backorders', "no" );
+        update_post_meta( $product_id, '_stock', "" );
+        
+    }
+    update_post_meta( $product_id, '_price', $product_price );
+    update_post_meta( $product_id, '_regular_price', $product_price );
+
+    return wc_get_product($product_id);;
+}
+
+
+function create_mondido_coupon($coupon_name, $discount_price, $sku = '')
+{
+    //function not yet complete, do not use
+    $page = get_page_by_title($coupon_name, OBJECT, 'shop_coupon');
+    $coupon = wc_get_coupon($page->ID);
+    $post_id = 0;
+    if(!isset($coupon))
+    {
+        $coupon = array(
+        'post_title' => $coupon_name,
+        'post_content' => $coupon_name,
+        'post_excerpt' => $coupon_name,
+        'post_status' => 'publish',
+        'post_author' => 1,
+        'post_type' => 'shop_coupon'
+        );
+
+        $new_coupon_id = wp_insert_post( $coupon );
+
+        update_post_meta( $new_coupon_id, 'discount_type', $discount_type );
+        update_post_meta( $new_coupon_id, 'coupon_amount', $amount );
+        update_post_meta( $new_coupon_id, 'individual_use', 'yes' );
+        update_post_meta( $new_coupon_id, 'product_ids', '' );
+        update_post_meta( $new_coupon_id, 'exclude_product_ids', '' );
+        update_post_meta( $new_coupon_id, 'usage_limit', '1' );
+        update_post_meta( $new_coupon_id, 'expiry_date', '' );
+        update_post_meta( $new_coupon_id, 'apply_before_tax', 'no' );
+        update_post_meta( $new_coupon_id, 'free_shipping', 'no' );      
+        update_post_meta( $new_coupon_id, 'exclude_sale_items', 'no' );     
+        update_post_meta( $new_coupon_id, 'free_shipping', 'no' );      
+        update_post_meta( $new_coupon_id, 'product_categories', '' );       
+        update_post_meta( $new_coupon_id, 'exclude_product_categories', '' );       
+        update_post_meta( $new_coupon_id, 'minimum_amount', '' );       
+        update_post_meta( $new_coupon_id, 'customer_email', '' );       
+
+    }   
+    return $coupon_code;
+}
+
+function update_order_with_incoming_products($order, $transaction)
+{
+    xdebug_enable();
+    $incoming_product_items = $transaction["metadata"]["products"];
+
+    foreach($incoming_product_items as $incoming_item)
+    {
+        $item_not_present = true;
+        foreach ($order->get_items() as $item) 
+        {
+            if((int)$incoming_item['id'] == (int)$item['product_id'])
+            {
+                $item_not_present = false;
+            }
+        }
+        if($item_not_present) // Mondido has added extra items to order
+        {
+            if(((int)$incoming_item["amount"])<0) //discount added by mondido, not yet implemented
+            {
+                //$order->add_coupon($incoming_item['name'].'-'.$incoming_item['id'], $incoming_item["amount"]);
+            }
+            else //additional product added by mondido, product cost is 0 or higher.
+            {
+                $order->add_product(create_mondido_product($incoming_item['name'],$incoming_item["amount"]), (int)$incoming_item["quantity"],$incoming_item['id']);
+            }
+            //$order->set_total($order->order_total + $incoming_item["amount"]);
+            $order->set_total($transaction["amount"]);
+        }
+    }
+}
 
 function order_needs_payment_filter( $needs_payment, $instance, $valid_order_statuses ) { 
     if( $needs_payment == false ) 
@@ -760,6 +884,7 @@ HTML;
                     $status = $transaction['status'];
                     $order = new WC_Order((int) $transaction["payment_ref"]);
                     if($status == 'approved' || $status == 'authorized' ){
+                        update_order_with_incoming_products($order, $trans);
                         $order->add_order_note( sprintf( __( 'Webhook callback transaction approved %s ', 'woocommerce' ), $transaction['id'] ));
                         $order->payment_complete();
                         $order->update_status( 'completed' );
@@ -941,6 +1066,10 @@ HTML;
                     $mondido->logger->send("Did not find an order", "successful_request","Merchant $mid");
                     return;
                 } 
+                
+                //Update order with order items if mondido added any
+                update_order_with_incoming_products($order, $transaction);
+
                 $stored_status = get_post_meta( $order->id, 'mondido-transaction-status' );
                 if(count($stored_status) > 0){
                     if($stored_status[0] == 'approved' || $stored_status[0] == 'authorized'){
