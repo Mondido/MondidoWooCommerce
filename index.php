@@ -25,17 +25,14 @@ add_filter( 'woocommerce_cart_needs_payment', 'cart_needs_payment_filter', 10, 2
 add_filter( 'woocommerce_order_needs_payment', 'order_needs_payment_filter', 10, 3 ); 
 
 
-function create_mondido_product($product_name, $product_price, $product_id = 0)
+function create_mondido_product($product_name, $product_price, $product_sku)
 {
-    if($product_id > 0) //if product already defined in woocommerce and mondido know the product id
+    $product_id = wc_get_product_id_by_sku($product_sku);
+    if($product_id > 0) //if product already defined in woocommerce by mondido sku 
     {
         $product = wc_get_product($product_id);
     }
-    else //product is not defined in woocommerce and mondido does not know the product id
-    {
-        $page = get_page_by_title($product_name, OBJECT, 'product');
-        $product = wc_get_product($page->ID);
-    }
+    
     $post_id = 0;
     if(!isset($product)) //if the product does not exist we need to create it 
     {
@@ -63,7 +60,7 @@ function create_mondido_product($product_name, $product_price, $product_id = 0)
         update_post_meta( $product_id, '_length', "" );
         update_post_meta( $product_id, '_width', "" );
         update_post_meta( $product_id, '_height', "" );
-        update_post_meta( $product_id, '_sku', "");
+        update_post_meta( $product_id, '_sku', $product_sku);
         update_post_meta( $product_id, '_product_attributes', array());
         update_post_meta( $product_id, '_sale_price_dates_from', "" );
         update_post_meta( $product_id, '_sale_price_dates_to', "" );
@@ -80,7 +77,7 @@ function create_mondido_product($product_name, $product_price, $product_id = 0)
 }
 
 
-function create_mondido_coupon($coupon_name, $discount_price, $sku = '')
+function create_mondido_coupon($coupon_name, $discount_price)
 {
     //function not yet complete, do not use
     $page = get_page_by_title($coupon_name, OBJECT, 'shop_coupon');
@@ -121,33 +118,50 @@ function create_mondido_coupon($coupon_name, $discount_price, $sku = '')
 
 function update_order_with_incoming_products($order, $transaction)
 {
-    xdebug_enable();
-    $incoming_product_items = $transaction["metadata"]["products"];
+    $incoming_product_items = $transaction["items"];
+
+    //Get all SKU:s for products in $order->items
+    $order_skus = array();
+    foreach ($order->get_items() as $item) 
+    {
+        $product = wc_get_product($item['product_id']);
+        if(isset($product))
+        {
+            $this_sku = $product->get_sku();
+            if(strlen($this_sku) > 0)
+            {
+                array_push($order_skus, $this_sku);
+            }
+        }
+    }
+
+    $order_items_updated = false;
 
     foreach($incoming_product_items as $incoming_item)
     {
         $item_not_present = true;
-        foreach ($order->get_items() as $item) 
+        foreach ($order_skus as $sku)
         {
-            if((int)$incoming_item['id'] == (int)$item['product_id'])
+            if(strlen($incoming_item['artno']) ==0 || $incoming_item['artno'] == $sku)
             {
                 $item_not_present = false;
             }
         }
         if($item_not_present) // Mondido has added extra items to order
         {
-            if(((int)$incoming_item["amount"])<0) //discount added by mondido, not yet implemented
+            if(((float)$incoming_item["amount"])<0) //discount added by mondido, not yet implemented
             {
                 //$order->add_coupon($incoming_item['name'].'-'.$incoming_item['id'], $incoming_item["amount"]);
             }
             else //additional product added by mondido, product cost is 0 or higher.
             {
-                $order->add_product(create_mondido_product($incoming_item['name'],$incoming_item["amount"]), (int)$incoming_item["quantity"],$incoming_item['id']);
+                $order->add_product(create_mondido_product($incoming_item['description'], $incoming_item["amount"], $incoming_item['artno']),$incoming_item['qty']);
             }
+            $order_items_updated = true;
             //$order->set_total($order->order_total + $incoming_item["amount"]);
-            $order->set_total($transaction["amount"]);
         }
     }
+    $order->set_total($transaction["amount"]);
 }
 
 function order_needs_payment_filter( $needs_payment, $instance, $valid_order_statuses ) { 
