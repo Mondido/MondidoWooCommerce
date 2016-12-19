@@ -161,7 +161,10 @@ function update_order_with_incoming_products($order, $transaction)
             //$order->set_total($order->order_total + $incoming_item["amount"]);
         }
     }
-    $order->set_total($transaction["amount"]);
+    if($order_items_updated)
+    {
+        $order->set_total($transaction["amount"]);
+    }
 }
 
 function order_needs_payment_filter( $needs_payment, $instance, $valid_order_statuses ) { 
