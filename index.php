@@ -3,7 +3,7 @@
   Plugin Name: Mondido Payments
   Plugin URI: https://www.mondido.com/
   Description: Mondido Payment plugin for WooCommerce
-  Version: 3.4.5
+  Version: 3.4.4
   Author: Mondido Payments
   Author URI: https://www.mondido.com
  */
