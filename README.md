@@ -1,11 +1,17 @@
 Mondido Payments 
 =======================
-WooCommerce plugin v3.4
+WooCommerce plugin v3.4.4
 
 FAQ: https://github.com/Mondido/WooCommerce/wiki/FAQ   
 
 The Mondido WooCommerce plugin supports multiple payment methods such as Cards, Invoice, Direct Bank, PayPal and Swish.
 The subscription service does NOT require WooCommerce Subscriptions, and are free of any additional costs.   
+
+## Changelog
+2016-12-20 (XMAS EDITION)
+- Version 3.4.4
+- Added support for surcharges and extra fees by adding an Item to the transaction after payment. This is implemented using the surcharges rules in the Mondido Rule Engine.
+
 
 ## Changelog
 2016-09-01
