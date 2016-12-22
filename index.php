@@ -718,7 +718,11 @@ EOT;
                 $items_item = array();
                 $c_item["id"] = $item['product_id'];
                 $c_item["quantity"] = $item['quantity'];
-                $c_item["total_amount"] = number_format($item['line_total'], 2, '.', '');
+                $price_inc_tax = number_format($item['line_total'], 2, '.', '') +  number_format($item['line_tax'], 2, '.', '');
+                $price_ex_tax = number_format($item['line_total'], 2, '.', '');
+                $tax = number_format($item['line_tax'], 2, '.', '');
+                $tax_perc = ($tax / $price_inc_tax) * 100;
+                $c_item["total_amount"] = $price_inc_tax;
                 if($has_plan_id == false)
                 {    
                     $plan_id = get_post_meta( $item["product_id"], '_plan_id', true );
@@ -735,15 +739,11 @@ EOT;
                     }
                 }
                 $prod = new WC_Product($item["product_id"]);
-                $price_inc_tax = number_format($item['line_total'], 2, '.', '') +  number_format($item['line_tax'], 2, '.', '');
-                $price_ex_tax = number_format($item['line_total'], 2, '.', '');
-                $tax = number_format($item['line_tax'], 2, '.', '');
-                $tax_perc = ($tax / $price_inc_tax) * 100;
                 
                 $c_item["image"] = $this->get_img_url($prod->get_image());
                 $c_item["weight"] = $prod->get_weight();
                 $c_item["vat"] = $tax;
-                $c_item["amount"] = $price_inc_tax;
+                $c_item["amount"] = $price_ex_tax;
                 $c_item["shipping_class"] = $prod->shipping_class;
                 $c_item["name"] = $prod->post->post_title;
                 $c_item["url"] = $prod->post->guid;
