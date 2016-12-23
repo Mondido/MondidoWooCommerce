@@ -3,12 +3,13 @@
   Plugin Name: Mondido Payments
   Plugin URI: https://www.mondido.com/
   Description: Mondido Payment plugin for WooCommerce
-  Version: 3.4.6
+  Version: 3.4.7
   Author: Mondido Payments
   Author URI: https://www.mondido.com
  */
 // Actions
 include 'log.php';
+
 add_action( 'plugins_loaded', 'woocommerce_mondido_init', 0);
 add_action('init', array('WC_Gateway_Mondido', 'check_mondido_response'));
 add_action('valid-mondido-callback', array('WC_Gateway_Mondido', 'successful_request'));
@@ -23,7 +24,13 @@ add_action( 'woocommerce_product_options_pricing', 'wc_rrp_product_field' );
 add_action( 'woocommerce_process_product_meta', 'woo_add_custom_general_fields_save' );
 add_filter( 'woocommerce_cart_needs_payment', 'cart_needs_payment_filter', 10, 2 ); 
 add_filter( 'woocommerce_order_needs_payment', 'order_needs_payment_filter', 10, 3 ); 
-
+add_filter('woocommerce_order_button_text','custom_order_button_text',1);
+function custom_order_button_text($order_button_text) {
+	
+    $mondido = new WC_Gateway_Mondido();
+    $btn_text = $mondido->order_button_text;
+	return $btn_text;
+}
 
 function create_mondido_product($product_name, $product_price, $product_sku)
 {
@@ -171,6 +178,9 @@ function order_needs_payment_filter( $needs_payment, $instance, $valid_order_sta
     if( $needs_payment == false ) 
     {
         global $woocommerce;
+        if($woocommerce->cart == null){
+            return;
+        }
         $prods = $woocommerce->cart->cart_contents;
         foreach($prods as $item)
         {
@@ -321,7 +331,7 @@ function woocommerce_mondido_init() {
                     );
             global $woocommerce;
             $this->selected_currency = '';
-            $this->plugin_version = "3.4.6";
+            $this->plugin_version = "3.4.7";
             // Currency
             if ( isset($woocommerce->session->client_currency) ) {
                 // If currency is set by WPML
@@ -339,17 +349,17 @@ function woocommerce_mondido_init() {
             $this->has_fields = false;
             $this->method_title = 'Mondido';
             $this->method_description = '';//__('', 'mondido');
-            if($this->settings['checkout-text'] != ''){
-                $this->order_button_text =$this->settings['checkout-text'];
-            }else{
-                $this->order_button_text = __('Proceed to Mondido', 'mondido');
-            }
             $this->liveurl = 'https://pay.mondido.com/v1/form';
             // Load forms and settings
             $this->init_form_fields();
             $this->init_settings();
             // Get from users settings
             $payment_options = '';
+            if($this->settings['checkout-text'] != ''){
+                $this->order_button_text =$this->settings['checkout-text'];
+            }else{
+                $this->order_button_text = __('Proceed to Mondido', 'mondido');
+            }
             if($this->settings['visa-mc'] == 'yes'){
                 $payment_options = 'Visa, MasterCard';
                 array_push($this->payment_methods,"visa","mastercard");
