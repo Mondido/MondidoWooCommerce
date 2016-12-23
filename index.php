@@ -3,7 +3,7 @@
   Plugin Name: Mondido Payments
   Plugin URI: https://www.mondido.com/
   Description: Mondido Payment plugin for WooCommerce
-  Version: 3.4.5
+  Version: 3.4.6
   Author: Mondido Payments
   Author URI: https://www.mondido.com
  */
@@ -321,7 +321,7 @@ function woocommerce_mondido_init() {
                     );
             global $woocommerce;
             $this->selected_currency = '';
-            $this->plugin_version = "3.4.5";
+            $this->plugin_version = "3.4.6";
             // Currency
             if ( isset($woocommerce->session->client_currency) ) {
                 // If currency is set by WPML
@@ -339,7 +339,11 @@ function woocommerce_mondido_init() {
             $this->has_fields = false;
             $this->method_title = 'Mondido';
             $this->method_description = __('', 'mondido');
-            $this->order_button_text = __('Proceed to Mondido', 'mondido');
+            if($this->settings['checkout-text'] != ''){
+                $this->order_button_text =$this->settings['checkout-text'];
+            }else{
+                $this->order_button_text = __('Proceed to Mondido', 'mondido');
+            }
             $this->liveurl = 'https://pay.mondido.com/v1/form';
             // Load forms and settings
             $this->init_form_fields();
@@ -377,8 +381,6 @@ function woocommerce_mondido_init() {
             if(substr( $payment_options, 0, 2 ) === ", "){
                 $payment_options = substr($payment_options, 2);
             }
-            
-            
             
             $icons = '';
             foreach($this->payment_methods as $method){
@@ -527,6 +529,11 @@ EOT;
                     'title' => __('API Password', 'mondido'),
                     'type' => 'text',
                     'description' => __('API Password from Mondido', 'mondido').' (<a href="https://admin.mondido.com/settings">https://admin.mondido.com/settings</a>',
+                ),
+                'checkout-text' => array(
+                    'title' => __('Checkout text', 'mondido'),
+                    'type' => 'text',
+                    'description' => __('Custom text for the checkout button', 'mondido'),
                 ),
                 'test' => array(
                     'title' => __('Test', 'mondido'),
@@ -700,7 +707,7 @@ EOT;
             }
             $shipping["unit_price"] = $shipping_total;
             $shipping["discount"] = 0;
-            $shipping["qty"] = 1;
+            $shipping["qty"] = 0;
             if($shipping_total > 0){
                 array_push($items,$shipping);
             }
@@ -718,10 +725,7 @@ EOT;
                 $items_item = array();
                 $c_item["id"] = $item['product_id'];
                 $c_item["quantity"] = $item['quantity'];
-                $price_inc_tax = number_format($item['line_total'], 2, '.', '') +  number_format($item['line_tax'], 2, '.', '');
-                $price_ex_tax = number_format($item['line_total'], 2, '.', '');
-                $tax = number_format($item['line_tax'], 2, '.', '');
-                $tax_perc = ($tax / $price_inc_tax) * 100;
+                $c_item["total_amount"] = number_format($item['line_total'], 2, '.', '');
                 if($has_plan_id == false)
                 {    
                     $plan_id = get_post_meta( $item["product_id"], '_plan_id', true );
@@ -738,21 +742,25 @@ EOT;
                     }
                 }
                 $prod = new WC_Product($item["product_id"]);
-                
                 $c_item["image"] = $this->get_img_url($prod->get_image());
                 $c_item["weight"] = $prod->get_weight();
-                $c_item["vat"] = $tax;
-                $c_item["amount"] = $price_inc_tax;
+                $c_item["vat"] = number_format($item['line_tax'], 2, '.', '');
+                $c_item["amount"] = $prod->price;
                 $c_item["shipping_class"] = $prod->shipping_class;
                 $c_item["name"] = $prod->post->post_title;
                 $c_item["url"] = $prod->post->guid;
                //invoice item
                 $items_item["artno"] = $prod->get_sku();
+                $price_inc_tax = $prod->get_price_including_tax();
+                $price_ex_tax = $prod->get_price_excluding_tax();
+                $tax = $price_inc_tax - $price_ex_tax;
+                $tax_perc = ($tax / $price_inc_tax) * 100;
                 $qty = $item['quantity'];
-                $items_item["vat"] = $tax;
-                $items_item["amount"] = $price_inc_tax;
+                $items_item["vat"] = number_format($item['line_tax'], 2, '.', '');
+                $items_item["amount"] = number_format($price_inc_tax * $qty, 2, '.', '');
                 $items_item["description"] = $prod->post->post_title;
                 $items_item["qty"] = $item['quantity'];
+                $items_item["unit_price"] = number_format($price_inc_tax, 2, '.', '');
                 $items_item["discount"] = 0;
                 array_push($products,$c_item);
                 array_push($items,$items_item);
