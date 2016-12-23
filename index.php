@@ -382,6 +382,8 @@ function woocommerce_mondido_init() {
                 $payment_options = substr($payment_options, 2);
             }
             
+            
+            
             $icons = '';
             foreach($this->payment_methods as $method){
                 $icons .= '<img src="https://cdn-02.mondido.com/www/img/woo/'.$method.'.png" class="mondido-paymentmethod" alt="Pay with '.$method.'on Mondido">';
@@ -707,7 +709,7 @@ EOT;
             }
             $shipping["unit_price"] = $shipping_total;
             $shipping["discount"] = 0;
-            $shipping["qty"] = 0;
+            $shipping["qty"] = 1;
             if($shipping_total > 0){
                 array_push($items,$shipping);
             }
@@ -725,7 +727,10 @@ EOT;
                 $items_item = array();
                 $c_item["id"] = $item['product_id'];
                 $c_item["quantity"] = $item['quantity'];
-                $c_item["total_amount"] = number_format($item['line_total'], 2, '.', '');
+                $price_inc_tax = number_format($item['line_total'], 2, '.', '') +  number_format($item['line_tax'], 2, '.', '');
+                $price_ex_tax = number_format($item['line_total'], 2, '.', '');
+                $tax = number_format($item['line_tax'], 2, '.', '');
+                $tax_perc = ($tax / $price_inc_tax) * 100;
                 if($has_plan_id == false)
                 {    
                     $plan_id = get_post_meta( $item["product_id"], '_plan_id', true );
@@ -742,25 +747,21 @@ EOT;
                     }
                 }
                 $prod = new WC_Product($item["product_id"]);
+                
                 $c_item["image"] = $this->get_img_url($prod->get_image());
                 $c_item["weight"] = $prod->get_weight();
-                $c_item["vat"] = number_format($item['line_tax'], 2, '.', '');
-                $c_item["amount"] = $prod->price;
+                $c_item["vat"] = $tax;
+                $c_item["amount"] = $price_inc_tax;
                 $c_item["shipping_class"] = $prod->shipping_class;
                 $c_item["name"] = $prod->post->post_title;
                 $c_item["url"] = $prod->post->guid;
                //invoice item
                 $items_item["artno"] = $prod->get_sku();
-                $price_inc_tax = $prod->get_price_including_tax();
-                $price_ex_tax = $prod->get_price_excluding_tax();
-                $tax = $price_inc_tax - $price_ex_tax;
-                $tax_perc = ($tax / $price_inc_tax) * 100;
                 $qty = $item['quantity'];
-                $items_item["vat"] = number_format($item['line_tax'], 2, '.', '');
-                $items_item["amount"] = number_format($price_inc_tax * $qty, 2, '.', '');
+                $items_item["vat"] = $tax;
+                $items_item["amount"] = $price_inc_tax;
                 $items_item["description"] = $prod->post->post_title;
                 $items_item["qty"] = $item['quantity'];
-                $items_item["unit_price"] = number_format($price_inc_tax, 2, '.', '');
                 $items_item["discount"] = 0;
                 array_push($products,$c_item);
                 array_push($items,$items_item);
