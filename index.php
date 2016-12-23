@@ -3,7 +3,7 @@
   Plugin Name: Mondido Payments
   Plugin URI: https://www.mondido.com/
   Description: Mondido Payment plugin for WooCommerce
-  Version: 3.4.5
+  Version: 3.4.6
   Author: Mondido Payments
   Author URI: https://www.mondido.com
  */
@@ -321,7 +321,7 @@ function woocommerce_mondido_init() {
                     );
             global $woocommerce;
             $this->selected_currency = '';
-            $this->plugin_version = "3.4.5";
+            $this->plugin_version = "3.4.6";
             // Currency
             if ( isset($woocommerce->session->client_currency) ) {
                 // If currency is set by WPML
@@ -338,8 +338,12 @@ function woocommerce_mondido_init() {
             $this->icon = "https://cdn-02.mondido.com/www/img/wp-mondido.png";
             $this->has_fields = false;
             $this->method_title = 'Mondido';
-            $this->method_description = __('', 'mondido');
-            $this->order_button_text = __('Proceed to Mondido', 'mondido');
+            $this->method_description = '';//__('', 'mondido');
+            if($this->settings['checkout-text'] != ''){
+                $this->order_button_text =$this->settings['checkout-text'];
+            }else{
+                $this->order_button_text = __('Proceed to Mondido', 'mondido');
+            }
             $this->liveurl = 'https://pay.mondido.com/v1/form';
             // Load forms and settings
             $this->init_form_fields();
@@ -402,7 +406,11 @@ function woocommerce_mondido_init() {
 EOT;
             }
             $iconsData = $css.'<div class="mondido-logos">'.$icons.'</div>';
-            $this->title = 'Mondido Payments';
+            if($this->settings['title'] != ''){
+                $this->title = $this->settings['title'];
+            }else{
+                $this->title = 'Mondido Payments';
+            }
             $this->description = $iconsData;
             $this->merchant_id = $this->settings['merchant_id'];
             $this->secret = $this->settings['secret'];
@@ -527,6 +535,16 @@ EOT;
                     'title' => __('API Password', 'mondido'),
                     'type' => 'text',
                     'description' => __('API Password from Mondido', 'mondido').' (<a href="https://admin.mondido.com/settings">https://admin.mondido.com/settings</a>',
+                ),
+                'checkout-text' => array(
+                    'title' => __('Checkout text', 'mondido'),
+                    'type' => 'text',
+                    'description' => __('Custom text for the checkout button', 'mondido'),
+                ),
+                'title' => array(
+                    'title' => __('Payment name', 'mondido'),
+                    'type' => 'text',
+                    'description' => __('Custom text for the payment name', 'mondido'),
                 ),
                 'test' => array(
                     'title' => __('Test', 'mondido'),
