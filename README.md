@@ -1,6 +1,6 @@
 Mondido Payments 
 =======================
-WooCommerce plugin v3.4.6
+WooCommerce plugin v3.4.7
 
 FAQ: https://github.com/Mondido/WooCommerce/wiki/FAQ   
 
@@ -9,7 +9,7 @@ The subscription service does NOT require WooCommerce Subscriptions, and are fre
 
 ## Changelog
 2016-12-22 (XMAS EDITION 2)
-- Version 3.4.6
+- Version 3.4.7
 - Editable button text
 
 2016-12-22 (XMAS EDITION)
