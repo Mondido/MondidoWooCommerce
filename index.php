@@ -25,6 +25,23 @@ add_action( 'woocommerce_process_product_meta', 'woo_add_custom_general_fields_s
 add_filter( 'woocommerce_cart_needs_payment', 'cart_needs_payment_filter', 10, 2 ); 
 add_filter( 'woocommerce_order_needs_payment', 'order_needs_payment_filter', 10, 3 ); 
 add_filter('woocommerce_order_button_text','custom_order_button_text',1);
+
+add_action( 'woocommerce_email_before_order_table', 'add_order_email_instructions', 10, 2 );
+ 
+function add_order_email_instructions( $order, $sent_to_admin ) {
+  
+  if ( ! $sent_to_admin ) {
+        echo '<h1>'$order->payment_method.'</h1>';
+    if ( 'mondido' == $order->payment_method ) {
+      // cash on delivery method
+      echo '<p><strong>Instructions:</strong> Full payment is due immediately upon delivery: <em>cash only, no exceptions</em>.</p>';
+    } else {
+      // other methods (ie credit card)
+      echo '<p><strong>Instructions:</strong> Please look for "Madrigal Electromotive GmbH" on your next credit card statement.</p>';
+    }
+  }
+}
+
 function custom_order_button_text($order_button_text) {
 	
     $mondido = new WC_Gateway_Mondido();
