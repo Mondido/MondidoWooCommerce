@@ -3,7 +3,7 @@
   Plugin Name: Mondido Payments
   Plugin URI: https://www.mondido.com/
   Description: Mondido Payment plugin for WooCommerce
-  Version: 3.4.7
+  Version: 3.4.8
   Author: Mondido Payments
   Author URI: https://www.mondido.com
  */
@@ -25,6 +25,7 @@ add_action( 'woocommerce_process_product_meta', 'woo_add_custom_general_fields_s
 add_filter( 'woocommerce_cart_needs_payment', 'cart_needs_payment_filter', 10, 2 ); 
 add_filter( 'woocommerce_order_needs_payment', 'order_needs_payment_filter', 10, 3 ); 
 add_filter('woocommerce_order_button_text','custom_order_button_text',1);
+
 function custom_order_button_text($order_button_text) {
 	
     $mondido = new WC_Gateway_Mondido();
@@ -75,6 +76,9 @@ function create_mondido_product($product_name, $product_price, $product_sku)
         update_post_meta( $product_id, '_manage_stock', "no" );
         update_post_meta( $product_id, '_backorders', "no" );
         update_post_meta( $product_id, '_stock', "" );
+        update_post_meta( $product_id, '_tax_status', "taxable" );
+        update_post_meta( $product_id, '_tax_class', "none" );
+        
         
     }
     update_post_meta( $product_id, '_price', $product_price );
@@ -143,13 +147,22 @@ function update_order_with_incoming_products($order, $transaction)
     }
 
     $order_items_updated = false;
+    //not valid products to create
+    $not_accepted = array("shipping", "frakt");
 
     foreach($incoming_product_items as $incoming_item)
     {
+        if (in_array(strtolower($incoming_item['artno']), $not_accepted)) {
+            continue;
+        }
+        if (in_array(strtolower($incoming_item['description']), $not_accepted)) {
+            continue;
+        }
+
         $item_not_present = true;
         foreach ($order_skus as $sku)
         {
-            if(strlen($incoming_item['artno']) ==0 || $incoming_item['artno'] == $sku)
+            if(strlen($incoming_item['artno']) == 0 || $incoming_item['artno'] == $sku)
             {
                 $item_not_present = false;
             }
@@ -331,7 +344,7 @@ function woocommerce_mondido_init() {
                     );
             global $woocommerce;
             $this->selected_currency = '';
-            $this->plugin_version = "3.4.7";
+            $this->plugin_version = "3.4.8";
             // Currency
             if ( isset($woocommerce->session->client_currency) ) {
                 // If currency is set by WPML
