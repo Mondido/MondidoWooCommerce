@@ -3,7 +3,7 @@
   Plugin Name: Mondido Payments
   Plugin URI: https://www.mondido.com/
   Description: Mondido Payment plugin for WooCommerce
-  Version: 3.4.7
+  Version: 3.4.8
   Author: Mondido Payments
   Author URI: https://www.mondido.com
  */
@@ -75,6 +75,9 @@ function create_mondido_product($product_name, $product_price, $product_sku)
         update_post_meta( $product_id, '_manage_stock', "no" );
         update_post_meta( $product_id, '_backorders', "no" );
         update_post_meta( $product_id, '_stock', "" );
+        update_post_meta( $product_id, '_tax_status', "taxable" );
+        update_post_meta( $product_id, '_tax_class', "none" );
+        
         
     }
     update_post_meta( $product_id, '_price', $product_price );
@@ -143,13 +146,22 @@ function update_order_with_incoming_products($order, $transaction)
     }
 
     $order_items_updated = false;
+    //not valid products to create
+    $not_accepted = array("shipping", "frakt");
 
     foreach($incoming_product_items as $incoming_item)
     {
+        if (in_array(strtolower($incoming_item['artno']), $not_accepted)) {
+            continue;
+        }
+        if (in_array(strtolower($incoming_item['description']), $not_accepted)) {
+            continue;
+        }
+
         $item_not_present = true;
         foreach ($order_skus as $sku)
         {
-            if(strlen($incoming_item['artno']) ==0 || $incoming_item['artno'] == $sku)
+            if(strlen($incoming_item['artno']) == 0 || $incoming_item['artno'] == $sku)
             {
                 $item_not_present = false;
             }
@@ -331,7 +343,7 @@ function woocommerce_mondido_init() {
                     );
             global $woocommerce;
             $this->selected_currency = '';
-            $this->plugin_version = "3.4.7";
+            $this->plugin_version = "3.4.8";
             // Currency
             if ( isset($woocommerce->session->client_currency) ) {
                 // If currency is set by WPML
