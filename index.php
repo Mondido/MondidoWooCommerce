@@ -28,19 +28,41 @@ add_filter('woocommerce_order_button_text','custom_order_button_text',1);
 
 add_action( 'woocommerce_email_before_order_table', 'add_order_email_instructions', 10, 2 );
  
-function add_order_email_instructions( $order, $sent_to_admin ) {
-  
-  if ( ! $sent_to_admin ) {
-        echo '<h1>'$order->payment_method.'</h1>';
-    if ( 'mondido' == $order->payment_method ) {
-      // cash on delivery method
-      echo '<p><strong>Instructions:</strong> Full payment is due immediately upon delivery: <em>cash only, no exceptions</em>.</p>';
-    } else {
-      // other methods (ie credit card)
-      echo '<p><strong>Instructions:</strong> Please look for "Madrigal Electromotive GmbH" on your next credit card statement.</p>';
-    }
-  }
+function myplugin_plugin_path() {
+ 
+  // gets the absolute path to this plugin directory
+ 
+  return untrailingslashit( plugin_dir_path( __FILE__ ) );
+ 
 }
+ 
+ 
+ 
+add_filter( 'woocommerce_locate_template', 'myplugin_woocommerce_locate_template', 10, 3 );
+function myplugin_woocommerce_locate_template( $template, $template_name, $template_path ) {
+  global $woocommerce;
+  $_template = $template;
+  if ( ! $template_path ) $template_path = $woocommerce->template_url;
+  $plugin_path  = myplugin_plugin_path() . '/woocommerce/';
+ 
+  // Look within passed path within the theme - this is priority
+  $template = locate_template(
+    array(
+      $template_path . $template_name,
+      $template_name
+    )
+  );
+  // Modification: Get the template from this plugin, if it exists
+  if ( ! $template && file_exists( $plugin_path . $template_name ) )
+    $template = $plugin_path . $template_name;
+  // Use default template
+  if ( ! $template )
+    $template = $_template;
+ 
+  // Return what we found
+  return $template;
+}
+
 
 function custom_order_button_text($order_button_text) {
 	
