@@ -158,7 +158,9 @@ function update_order_with_incoming_products($order, $transaction)
         if (in_array(strtolower($incoming_item['description']), $not_accepted)) {
             continue;
         }
-
+        if (strlen(trim($incoming_item['artno'])) == 0){
+            continue; //since we don't have a artno we do not want to parse this. It's not created by Mondido
+        }
         $item_not_present = true;
         foreach ($order_skus as $sku)
         {
