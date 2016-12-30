@@ -26,19 +26,12 @@ add_filter( 'woocommerce_cart_needs_payment', 'cart_needs_payment_filter', 10, 2
 add_filter( 'woocommerce_order_needs_payment', 'order_needs_payment_filter', 10, 3 ); 
 add_filter('woocommerce_order_button_text','custom_order_button_text',1);
 
-add_action( 'woocommerce_email_before_order_table', 'add_order_email_instructions', 10, 2 );
- 
+add_filter( 'woocommerce_locate_template', 'myplugin_woocommerce_locate_template', 10, 3 );
 function myplugin_plugin_path() {
- 
   // gets the absolute path to this plugin directory
- 
   return untrailingslashit( plugin_dir_path( __FILE__ ) );
- 
 }
  
- 
- 
-add_filter( 'woocommerce_locate_template', 'myplugin_woocommerce_locate_template', 10, 3 );
 function myplugin_woocommerce_locate_template( $template, $template_name, $template_path ) {
   global $woocommerce;
   $_template = $template;
