@@ -76,6 +76,14 @@ msgstr "Eget namn på Mondido betalmetod"
 msgid "Custom text for the payment name"
 msgstr "Egen text som du kan visa i kassan där man kan betala med Mondido"
 
+#: index.php:575
+msgid "Description"
+msgstr "Egen beskrivning på Mondido betalmetod"
+
+#: index.php:577
+msgid "Custom text for the payment description"
+msgstr "Egen beskrivning som du kan visa i kassan där man kan betala med Mondido"
+
 #: index.php:550
 msgid "Test"
 msgstr "Testbetalningar"
