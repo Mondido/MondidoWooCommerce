@@ -1186,7 +1186,6 @@ HTML;
                     );
                     if($status == 'authorized'){
                         $mondido->logger->send("Settings order $order->id to Awaiting Mondido payment", "successful_request","Merchant $mid");
-                        update_post_meta( $order->id, 'mondido-transaction-status', 'authorized' );
                         $order->update_status('pending', __( 'Awaiting Mondido payment', 'woocommerce' ));
                         $mondido->logger->send("Sending WC_Email_Customer_Processing_Order for $order->id", "successful_request","Merchant $mid");
                         $mondido->logger->send("Sending WC_Email_New_Order for $order->id", "successful_request","Merchant $mid");
@@ -1194,11 +1193,13 @@ HTML;
                         WC()->mailer()->emails['WC_Email_New_Order']->trigger($order->id);
 
                         //Prevent payment_complete() to be called twice if webhook already called it
-                         $stored_status = get_post_meta( $order->id, 'mondido-transaction-status' );
+                        $stored_status = get_post_meta( $order->id, 'mondido-transaction-status' );
                         if($stored_status != "authorized" && $stored_status != "approved")
                         {
                             $order->payment_complete($posted['transaction_id']);
                         }
+                        update_post_meta( $order->id, 'mondido-transaction-status', 'authorized' );
+                        
                     }elseif($status == 'approved'){
                         // Payment Complete
                         $order->update_status('pending', __( 'Awaiting Mondido payment', 'woocommerce' ));
@@ -1208,13 +1209,15 @@ HTML;
                             $mondido->logger->send("Sending WC_Email_Customer_Processing_Order for $order->id", "successful_request","Merchant $mid");
                         }
                         $mondido->logger->send("Sending WC_Email_New_Order for $order->id", "successful_request","Merchant $mid");
-                        update_post_meta( $order->id, 'mondido-transaction-status', 'approved' );
-
+                        
                         //Prevent payment_complete() to be called twice if webhook already called it
+                        $stored_status = get_post_meta( $order->id, 'mondido-transaction-status' );
                         if($stored_status != "authorized" && $stored_status != "approved")
                         {
                             $order->payment_complete($posted['transaction_id']);
                         }
+                        update_post_meta( $order->id, 'mondido-transaction-status', 'approved' );
+
     
                         WC()->mailer()->emails['WC_Email_New_Order']->trigger($order->id);
                     }
