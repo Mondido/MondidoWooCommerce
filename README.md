@@ -1,6 +1,6 @@
 Mondido Payments 
 =======================
-WooCommerce plugin v3.4
+WooCommerce plugin v3.4.7
 
 FAQ: https://github.com/Mondido/WooCommerce/wiki/FAQ   
 
@@ -8,18 +8,29 @@ The Mondido WooCommerce plugin supports multiple payment methods such as Cards, 
 The subscription service does NOT require WooCommerce Subscriptions, and are free of any additional costs.   
 
 ## Changelog
+2016-12-22 (XMAS EDITION 2)
+- Version 3.4.7
+- Editable button text
+
+2016-12-22 (XMAS EDITION)
+- Version 3.4.5
+- Fixed amount for items
+
+2016-12-20 
+- Version 3.4.4
+- Added support for surcharges and extra fees by adding an Item to the transaction after payment. This is implemented using the surcharges rules in the Mondido Rule Engine.
+
+
 2016-09-01
 - Version 3.4
 - Fixed logos and checkout bugs
 
 
-## Changelog
 2016-08-26
 - Version 3.3
 - Added logging and email refactoring
 
 
-## Changelog
 2016-08-10
 - Version 3.2
 - Refactored [] to array() (seems like you like old PHP versions huh?)
