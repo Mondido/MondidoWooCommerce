@@ -3,7 +3,7 @@
   Plugin Name: Mondido Payments
   Plugin URI: https://www.mondido.com/
   Description: Mondido Payment plugin for WooCommerce
-  Version: 3.4.8
+  Version: 3.4.9
   Author: Mondido Payments
   Author URI: https://www.mondido.com
  */
@@ -346,7 +346,7 @@ function woocommerce_mondido_init() {
                     );
             global $woocommerce;
             $this->selected_currency = '';
-            $this->plugin_version = "3.4.8";
+            $this->plugin_version = "3.4.9";
             // Currency
             if ( isset($woocommerce->session->client_currency) ) {
                 // If currency is set by WPML
@@ -945,7 +945,15 @@ HTML;
                     if($status == 'approved' || $status == 'authorized' ){
                         update_order_with_incoming_products($order, $trans);
                         $order->add_order_note( sprintf( __( 'Webhook callback transaction approved %s ', 'woocommerce' ), $transaction['id'] ));
-                        $order->payment_complete();
+                       
+                        //Prevent payment_complete() to be called twice if already called upon redirect
+                        $stored_status = get_post_meta( $order->id, 'mondido-transaction-status' );
+                        if($stored_status != "authorized" && $stored_status != "approved")
+                        {
+                            $order->payment_complete();
+                        }
+                        update_post_meta( $order->id, 'mondido-transaction-status', $status );
+
                         $order->update_status( 'completed' );
                     }elseif($status == 'declined'){
                         $order->update_status('failed', __( 'Mondido payment declined!', 'woocommerce' ));
@@ -1178,13 +1186,20 @@ HTML;
                     );
                     if($status == 'authorized'){
                         $mondido->logger->send("Settings order $order->id to Awaiting Mondido payment", "successful_request","Merchant $mid");
-                        update_post_meta( $order->id, 'mondido-transaction-status', 'authorized' );
                         $order->update_status('pending', __( 'Awaiting Mondido payment', 'woocommerce' ));
                         $mondido->logger->send("Sending WC_Email_Customer_Processing_Order for $order->id", "successful_request","Merchant $mid");
                         $mondido->logger->send("Sending WC_Email_New_Order for $order->id", "successful_request","Merchant $mid");
                         WC()->mailer()->emails['WC_Email_Customer_Processing_Order']->trigger($order->id);
                         WC()->mailer()->emails['WC_Email_New_Order']->trigger($order->id);
-                        $order->payment_complete($posted['transaction_id']);
+
+                        //Prevent payment_complete() to be called twice if webhook already called it
+                        $stored_status = get_post_meta( $order->id, 'mondido-transaction-status' );
+                        if($stored_status != "authorized" && $stored_status != "approved")
+                        {
+                            $order->payment_complete($posted['transaction_id']);
+                        }
+                        update_post_meta( $order->id, 'mondido-transaction-status', 'authorized' );
+                        
                     }elseif($status == 'approved'){
                         // Payment Complete
                         $order->update_status('pending', __( 'Awaiting Mondido payment', 'woocommerce' ));
@@ -1194,8 +1209,16 @@ HTML;
                             $mondido->logger->send("Sending WC_Email_Customer_Processing_Order for $order->id", "successful_request","Merchant $mid");
                         }
                         $mondido->logger->send("Sending WC_Email_New_Order for $order->id", "successful_request","Merchant $mid");
+                        
+                        //Prevent payment_complete() to be called twice if webhook already called it
+                        $stored_status = get_post_meta( $order->id, 'mondido-transaction-status' );
+                        if($stored_status != "authorized" && $stored_status != "approved")
+                        {
+                            $order->payment_complete($posted['transaction_id']);
+                        }
                         update_post_meta( $order->id, 'mondido-transaction-status', 'approved' );
-                        $order->payment_complete($posted['transaction_id']);
+
+    
                         WC()->mailer()->emails['WC_Email_New_Order']->trigger($order->id);
                     }
                     update_post_meta( $order->id, 'mondido-transaction-id', $posted['transaction_id'] );
