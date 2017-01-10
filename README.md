@@ -1,6 +1,6 @@
 Mondido Payments 
 =======================
-WooCommerce plugin v3.4.7
+WooCommerce plugin v3.4.9
 
 FAQ: https://github.com/Mondido/WooCommerce/wiki/FAQ   
 
@@ -8,6 +8,12 @@ The Mondido WooCommerce plugin supports multiple payment methods such as Cards, 
 The subscription service does NOT require WooCommerce Subscriptions, and are free of any additional costs.   
 
 ## Changelog
+2017-01-10
+- Version 3.4.9
+- Editable checkout text
+- Fix for double "complete" on wewbhook and redirect callbacks
+
+
 2016-12-22 (XMAS EDITION 2)
 - Version 3.4.7
 - Editable button text
