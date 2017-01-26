@@ -3,7 +3,7 @@
   Plugin Name: Mondido Payments
   Plugin URI: https://www.mondido.com/
   Description: Mondido Payment plugin for WooCommerce
-  Version: 3.4.9
+  Version: 3.5
   Author: Mondido Payments
   Author URI: https://www.mondido.com
  */
@@ -76,10 +76,8 @@ function create_mondido_product($product_name, $product_price, $product_sku)
         update_post_meta( $product_id, '_manage_stock', "no" );
         update_post_meta( $product_id, '_backorders', "no" );
         update_post_meta( $product_id, '_stock', "" );
-        update_post_meta( $product_id, '_tax_status', "taxable" );
-        update_post_meta( $product_id, '_tax_class', "none" );
-        
-        
+        update_post_meta( $product_id, '_tax_status', "taxable" ); //setting in admin taxable/none
+        update_post_meta( $product_id, '_tax_class', "none" ); //fetch from system, WC_Tax::get_tax_classes();
     }
     update_post_meta( $product_id, '_price', $product_price );
     update_post_meta( $product_id, '_regular_price', $product_price );
@@ -334,6 +332,18 @@ function woocommerce_mondido_init() {
         return;
     }
     class WC_Gateway_Mondido extends WC_Payment_Gateway {
+
+        protected function payment_complete( $order, $txn_id = '', $note = '' ) {
+            $order->add_order_note( $note );
+            $order->payment_complete( $txn_id );
+        }
+
+        protected function payment_on_hold( $order, $reason = '' ) {
+            $order->update_status( 'on-hold', $reason );
+            $order->reduce_order_stock();
+            WC()->cart->empty_cart();
+        }
+
         public function __construct()
         {
 
@@ -346,7 +356,7 @@ function woocommerce_mondido_init() {
                     );
             global $woocommerce;
             $this->selected_currency = '';
-            $this->plugin_version = "3.4.9";
+            $this->plugin_version = "3.5";
             // Currency
             if ( isset($woocommerce->session->client_currency) ) {
                 // If currency is set by WPML
@@ -441,6 +451,18 @@ EOT;
             $this->secret = $this->settings['secret'];
             $this->password = $this->settings['password'];
             $this->currency = $this->selected_currency; //pick currency from shop
+
+            if(empty($this->settings['tax_status'])){
+                $this->tax_status = 'taxable'; 
+            }else{
+                $this->tax_status = $this->settings['tax_status']; 
+            }
+            if(empty($this->settings['tax_class'])){
+                $this->tax_class = 'none'; 
+            }else{
+                $this->tax_class = $this->settings['tax_class']; 
+            }
+
             $test = 'false';
             if($this->settings['test'] == 'yes'){
                 $test = 'true';
@@ -541,6 +563,8 @@ EOT;
 }
 EOT;
 
+            $tax_classes = WC_Tax::get_tax_classes();
+
             $this->form_fields = array(
                 'enabled' => array(
                     'title' => __('Enable/Disable', 'mondido'),
@@ -586,6 +610,27 @@ EOT;
                     'type' => 'checkbox',
                     'label' => __('Reserve money, do not auto-capture.', 'mondido'),
                     'default' => 'yes'),
+
+                'tax_class' => array(
+                    'title' => __('Tax class for payment fees', 'mondido'),
+                    'type' => 'select',
+                    'label' => __('If you have a fee for invoice payments, what tax class should be applied to that fee.', 'mondido'),
+                    'default' => 'none',
+                    'options' => $tax_classes
+                    ),
+
+                'tax_status' => array(
+                    'title' => __('Tax status for payment fees', 'mondido'),
+                    'type' => 'select',
+                    'label' => __('If any payment fee should be taxable', 'mondido'),
+                    'default' => 'none',
+                    'options' => array(
+                        'none' => 'none',
+                        'taxable' => 'taxable'
+                        )
+                    ),
+
+
                 'visa-mc' => array(
                     'title' => __('Visa, MasterCard', 'mondido'),
                     'type' => 'checkbox',
@@ -675,7 +720,7 @@ EOT;
             $mondido->store_transaction($_POST['id'],$response['body']);
             $transaction = json_decode($response['body'],true);
             if($transaction['status'] == 'approved'){
-                $order->payment_complete( $transaction['id'] );
+                $mondido->payment_complete($order,$transaction['id'],'capture success');
                 $log = new WC_Logger();
                 $log->add( 'mondido capture ','success' );
                 $mondido->fetch_transaction_from_API($t['id'], $_POST['id']);
@@ -724,6 +769,7 @@ EOT;
             $items = array();
             $analytics = array();
             $google = array();
+            $plugin_log = array();
             $cart = $woocommerce->cart->cart_contents;
             $crt = $woocommerce->cart;
             $vat_amount = $crt->tax_total;
@@ -762,48 +808,56 @@ EOT;
             $has_plan_id = false;
             $subscription_quantity = 1;
             foreach($cart as $item){
-                $c_item = array();
-                $items_item = array();
-                $c_item["id"] = $item['product_id'];
-                $c_item["quantity"] = $item['quantity'];
-                $price_inc_tax = number_format($item['line_total'], 2, '.', '') +  number_format($item['line_tax'], 2, '.', '');
-                $price_ex_tax = number_format($item['line_total'], 2, '.', '');
-                $tax = number_format($item['line_tax'], 2, '.', '');
-                $tax_perc = ($tax / $price_inc_tax) * 100;
-                if($has_plan_id == false)
-                {    
-                    $plan_id = get_post_meta( $item["product_id"], '_plan_id', true );
-                    if(intval($plan_id) > 0)
-                    {
-                        $has_plan_id = true;
-                        $c_item["plan_id"] = $plan_id; 
-                        $c_item["product_type"] = 'recurring'; 
-                        $subscription_quantity = $item['quantity'];
+                try{
+                    $c_item = array();
+                    $items_item = array();
+                    $c_item["id"] = $item['product_id'];
+                    $c_item["quantity"] = $item['quantity'];
+                    $price_inc_tax = number_format($item['line_total'], 2, '.', '') +  number_format($item['line_tax'], 2, '.', '');
+                    $price_ex_tax = number_format($item['line_total'], 2, '.', '');
+                    $tax = number_format($item['line_tax'], 2, '.', '');
+                    $tax_perc = ($tax / $price_inc_tax) * 100;
+                    if($has_plan_id == false)
+                    {    
+                        $plan_id = get_post_meta( $item["product_id"], '_plan_id', true );
+                        if(intval($plan_id) > 0)
+                        {
+                            $has_plan_id = true;
+                            $c_item["plan_id"] = $plan_id; 
+                            $c_item["product_type"] = 'recurring'; 
+                            $subscription_quantity = $item['quantity'];
+                        }
+                        else 
+                        {
+                            $c_item["product_type"] = 'normal'; 
+                        }
                     }
-                    else 
-                    {
-                        $c_item["product_type"] = 'normal'; 
+                    $prod = new WC_Product($item["product_id"]);
+                    
+                    $c_item["image"] = $this->get_img_url($prod->get_image());
+                    $c_item["weight"] = $prod->get_weight();
+                    $c_item["vat"] = $tax;
+                    $c_item["amount"] = $price_inc_tax;
+                    $c_item["shipping_class"] = $prod->shipping_class;
+                    $c_item["name"] = $prod->post->post_title;
+                    $c_item["url"] = $prod->post->guid;
+                //invoice item
+                    $items_item["artno"] = $prod->get_sku();
+                    if(empty($items_item["artno"])){
+                        $items_item["artno"] = $prod->id;
                     }
+                    $qty = $item['quantity'];
+                    $items_item["vat"] = $tax;
+                    $items_item["amount"] = $price_inc_tax;
+                    $items_item["description"] = $prod->post->post_title;
+                    $items_item["qty"] = $item['quantity'];
+                    $items_item["discount"] = 0;
+                    array_push($products,$c_item);
+                    array_push($items,$items_item);
+                }catch (Exception $e) {
+                    array_push($plugin_log,$e);
+                    
                 }
-                $prod = new WC_Product($item["product_id"]);
-                
-                $c_item["image"] = $this->get_img_url($prod->get_image());
-                $c_item["weight"] = $prod->get_weight();
-                $c_item["vat"] = $tax;
-                $c_item["amount"] = $price_inc_tax;
-                $c_item["shipping_class"] = $prod->shipping_class;
-                $c_item["name"] = $prod->post->post_title;
-                $c_item["url"] = $prod->post->guid;
-               //invoice item
-                $items_item["artno"] = $prod->get_sku();
-                $qty = $item['quantity'];
-                $items_item["vat"] = $tax;
-                $items_item["amount"] = $price_inc_tax;
-                $items_item["description"] = $prod->post->post_title;
-                $items_item["qty"] = $item['quantity'];
-                $items_item["discount"] = 0;
-                array_push($products,$c_item);
-                array_push($items,$items_item);
             }
             $platform["type"] = "wocoomerce";
             $platform["version"] = $woocommerce->version;
@@ -835,7 +889,8 @@ EOT;
                 "customer" => $customer,
                 "platform" => $platform,
                 "order" => $order_items,
-                "analytics" => $analytics
+                "analytics" => $analytics,
+                "log" => $plugin_log
             );
             $metadata = json_encode($md);
             $amount = number_format($order->order_total, 2, '.', '');
@@ -863,13 +918,13 @@ EOT;
                 'hash' => $hash,
                 'success_url' => $this->get_return_url($order),
                 'error_url' => $order->get_cancel_order_url(),
-                'metadata' => $metadata,
+                'metadata' => urlencode($metadata),
                 'test' => $this->test,
                 'authorize' => $this->authorize,
                 'plan_id' => $plan_id,
-                'items' => json_encode($items),
+                'items' => urlencode(json_encode($items)),
                 'subscription_quantity' => $subscription_quantity,
-                'webhook' => json_encode($webhook)
+                'webhook' => urlencode(json_encode($webhook))
             );
             $mondido_args_array = array();
             foreach ($mondido_args as $key => $value) {
@@ -955,11 +1010,15 @@ HTML;
                         $stored_status = get_post_meta( $order->id, 'mondido-transaction-status' );
                         if($stored_status != "authorized" && $stored_status != "approved")
                         {
-                            $order->payment_complete();
+                            if($status == 'approved'){
+                                $mondido->payment_complete($order,$transaction['id'],'payment complete from webhook');
+                            }else if($status == 'authorized'){
+                                $mondido->payment_on_hold($order,'payment authorized from webhook');
+                            }
                         }
                         update_post_meta( $order->id, 'mondido-transaction-status', $status );
 
-                        $order->update_status( 'completed' );
+//                        $order->update_status( 'completed' );
                     }elseif($status == 'declined'){
                         $order->update_status('failed', __( 'Mondido payment declined!', 'woocommerce' ));
                         $order->add_order_note( sprintf( __( 'Webhook callback transaction declined %s ', 'woocommerce' ), $transaction['id'] ));
@@ -969,9 +1028,6 @@ HTML;
                     }elseif($status == 'pending'){
                         $order->update_status('pending', __( 'Mondido payment pending!', 'woocommerce' ));
                         $order->add_order_note( sprintf( __( 'Webhook callback transaction pending %s ', 'woocommerce' ), $transaction['id'] ));
-                    }elseif($status == 'authorized'){
-                        $order->update_status('pending', __( 'Mondido payment authorized!', 'woocommerce' ));
-                        $order->add_order_note( sprintf( __( 'Webhook callback transaction authorized %s ', 'woocommerce' ), $transaction['id'] ));
                     }
                     $mondido->logger->send("Updating to $status", "parse_webhook","Merchant $mid");
 
@@ -1201,7 +1257,7 @@ HTML;
                         $stored_status = get_post_meta( $order->id, 'mondido-transaction-status' );
                         if($stored_status != "authorized" && $stored_status != "approved")
                         {
-                            $order->payment_complete($posted['transaction_id']);
+                            $mondido->payment_on_hold($order,$posted['transaction_id'],'payment authorized from redirect');
                         }
                         update_post_meta( $order->id, 'mondido-transaction-status', 'authorized' );
                         
@@ -1219,16 +1275,12 @@ HTML;
                         $stored_status = get_post_meta( $order->id, 'mondido-transaction-status' );
                         if($stored_status != "authorized" && $stored_status != "approved")
                         {
-                            $order->payment_complete($posted['transaction_id']);
+                            $mondido->payment_complete($order,$posted['transaction_id'],'payment complete from redirect');
                         }
                         update_post_meta( $order->id, 'mondido-transaction-status', 'approved' );
-
-    
                         WC()->mailer()->emails['WC_Email_New_Order']->trigger($order->id);
                     }
                     update_post_meta( $order->id, 'mondido-transaction-id', $posted['transaction_id'] );
-                    // Remove cart
-                    $woocommerce->cart->empty_cart();
                 } else {
                     $mondido->logger->send("Failure. Callback completed for order $order->id, incorrect hash -- fake payment?", "successful_request","Merchant $mid");
                     $order->update_status('failed');
