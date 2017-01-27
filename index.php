@@ -413,6 +413,10 @@ function woocommerce_mondido_init() {
                 $payment_options = $payment_options.', PayPal';
                  array_push($this->payment_methods,"paypal");
            }
+            if(array_key_exists('masterpass', $this->settings) && $this->settings['masterpass'] == 'yes'){
+                $payment_options = $payment_options.', Masterpass';
+                 array_push($this->payment_methods,"mp");
+           }
             if(substr( $payment_options, 0, 2 ) === ", "){
                 $payment_options = substr($payment_options, 2);
             }
@@ -663,6 +667,11 @@ EOT;
                     'default' => 'no'),
                  'paypal' => array(
                     'title' => __('PayPal', 'mondido'),
+                    'type' => 'checkbox',
+                    'label' => '',
+                    'default' => 'no'),
+                 'masterpass' => array(
+                    'title' => __('Masterpass', 'mondido'),
                     'type' => 'checkbox',
                     'label' => '',
                     'default' => 'no'),

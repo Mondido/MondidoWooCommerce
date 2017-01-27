@@ -12,6 +12,7 @@ The subscription service does NOT require WooCommerce Subscriptions, and are fre
 - Version 3.5
 - Updated order status on authorized payments
 - Tax settings for payment fee
+- Masterpass settings
 
 2017-01-10
 - Version 3.4.9
