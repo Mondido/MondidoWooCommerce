@@ -3,7 +3,7 @@
   Plugin Name: Mondido Payments
   Plugin URI: https://www.mondido.com/
   Description: Mondido Payment plugin for WooCommerce
-  Version: 3.5
+  Version: 3.51
   Author: Mondido Payments
   Author URI: https://www.mondido.com
  */
@@ -356,7 +356,7 @@ function woocommerce_mondido_init() {
                     );
             global $woocommerce;
             $this->selected_currency = '';
-            $this->plugin_version = "3.5";
+            $this->plugin_version = "3.51";
             // Currency
             if ( isset($woocommerce->session->client_currency) ) {
                 // If currency is set by WPML
@@ -803,6 +803,7 @@ EOT;
             }
             $shipping["unit_price"] = $shipping_total;
             $shipping["discount"] = 0;
+            $shipping["fee"] = 0;
             $shipping["qty"] = 1;
             if($shipping_total > 0){
                 array_push($items,$shipping);
@@ -813,6 +814,12 @@ EOT;
                 $discount["amount"] = number_format(0-($crt->discount_cart + $crt->discount_cart_tax), 2, '.', '');
                 array_push($items,$discount);
             }
+            if($crt->fee_total != ''){
+                $fee = array();
+                $fee["name"] = "Fee";
+                $fee["amount"] = number_format($crt->fee_total, 2, '.', '');
+                array_push($items,$fee);
+            }	
             #vat weight attributes
             $has_plan_id = false;
             $subscription_quantity = 1;
@@ -861,6 +868,7 @@ EOT;
                     $items_item["description"] = $prod->post->post_title;
                     $items_item["qty"] = $item['quantity'];
                     $items_item["discount"] = 0;
+                    $items_item["fee"] = 0;
                     array_push($products,$c_item);
                     array_push($items,$items_item);
                 }catch (Exception $e) {
@@ -893,6 +901,7 @@ EOT;
             $order_items["coupons"] = $coupons;
             $order_items["discount"] = $crt->discount_cart;
             $order_items["discount_vat"] = $crt->discount_cart_tax;
+            $order_items["fee"] = $crt->fee_total;
             $md = array(
                 "products" => $products,
                 "customer" => $customer,
