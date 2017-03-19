@@ -639,7 +639,7 @@ EOT;
                     'title' => __('Authorize', 'mondido'),
                     'type' => 'checkbox',
                     'label' => __('Reserve money, do not auto-capture.', 'mondido'),
-                    'default' => 'yes'),
+                    'default' => 'no'),
 
                 'tax_class' => array(
                     'title' => __('Tax class for payment fees', 'mondido'),
