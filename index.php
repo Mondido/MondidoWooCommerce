@@ -816,58 +816,55 @@ EOT;
             #vat weight attributes
             $has_plan_id = false;
             $subscription_quantity = 1;
-            foreach($cart as $item){
-                try{
-                    $c_item = array();
-                    $items_item = array();
-                    $c_item["id"] = $item['product_id'];
-                    $c_item["quantity"] = $item['quantity'];
-                    $price_inc_tax = number_format($item['line_total'], 2, '.', '') +  number_format($item['line_tax'], 2, '.', '');
-                    $price_ex_tax = number_format($item['line_total'], 2, '.', '');
-                    $tax = number_format($item['line_tax'], 2, '.', '');
-                    $tax_perc = ($tax / $price_inc_tax) * 100;
-                    if($has_plan_id == false)
-                    {    
-                        $plan_id = get_post_meta( $item["product_id"], '_plan_id', true );
-                        if(intval($plan_id) > 0)
-                        {
-                            $has_plan_id = true;
-                            $c_item["plan_id"] = $plan_id; 
-                            $c_item["product_type"] = 'recurring'; 
-                            $subscription_quantity = $item['quantity'];
-                        }
-                        else 
-                        {
-                            $c_item["product_type"] = 'normal'; 
-                        }
-                    }
-                    $prod = new WC_Product($item["product_id"]);
-                    
-                    $c_item["image"] = $this->get_img_url($prod->get_image());
-                    $c_item["weight"] = $prod->get_weight();
-                    $c_item["vat"] = $tax;
-                    $c_item["amount"] = $price_inc_tax;
-                    $c_item["shipping_class"] = $prod->shipping_class;
-                    $c_item["name"] = $prod->post->post_title;
-                    $c_item["url"] = $prod->post->guid;
-                //invoice item
-                    $items_item["artno"] = $prod->get_sku();
-                    if(empty($items_item["artno"])){
-                        $items_item["artno"] = $prod->id;
-                    }
-                    $qty = $item['quantity'];
-                    $items_item["vat"] = $tax;
-                    $items_item["amount"] = $price_inc_tax;
-                    $items_item["description"] = $prod->post->post_title;
-                    $items_item["qty"] = $item['quantity'];
-                    $items_item["discount"] = 0;
-                    array_push($products,$c_item);
-                    array_push($items,$items_item);
-                }catch (Exception $e) {
-                    array_push($plugin_log,$e);
-                    
-                }
-            }
+	        foreach ( $order->get_items() as $order_item ) {
+	        	$product_id = $order_item['product_id'];
+		        $price        = $order->get_line_subtotal( $order_item, false, false );
+		        $priceWithTax = $order->get_line_subtotal( $order_item, true, false );
+		        $tax          = $priceWithTax - $price;
+		        //$taxPercent   = ( $tax > 0 ) ? round( 100 / ( $price / $tax ) ) : 0;
+
+		        $c_item = array();
+		        $items_item = array();
+		        $c_item['id'] = $product_id;
+		        $c_item['quantity'] = $order_item['qty'];
+
+		        if ($has_plan_id == false) {
+			        $plan_id = get_post_meta( $product_id, '_plan_id', true );
+			        if ((int) $plan_id > 0) {
+				        $has_plan_id = true;
+				        $c_item['plan_id'] = $plan_id;
+				        $c_item['product_type'] = 'recurring';
+				        $subscription_quantity = $order_item['qty'];
+			        } else {
+				        $c_item['product_type'] = 'normal';
+			        }
+		        }
+
+		        $prod = wc_get_product($product_id);
+
+		        $c_item['image'] = $this->get_img_url($prod->get_image());
+		        $c_item['weight'] = $prod->get_weight();
+		        $c_item['vat'] = number_format($tax, 2, '.', '');
+		        $c_item['amount'] = number_format($priceWithTax, 2, '.', '');
+		        $c_item['shipping_class'] = $prod->shipping_class;
+		        $c_item['name'] = $order_item['name'];
+		        $c_item['url'] = $prod->post->guid;
+
+		        // Invoice item
+		        $items_item['artno'] = $prod->get_sku();
+		        if (empty($items_item['artno'])) {
+			        $items_item['artno'] = $prod->id;
+		        }
+
+		        $items_item['vat'] = number_format($tax, 2, '.', '');
+		        $items_item['amount'] = number_format($priceWithTax, 2, '.', '');
+		        $items_item['description'] = $order_item['name'];
+		        $items_item['qty'] = $order_item['qty'];
+		        $items_item['discount'] = 0;
+		        array_push($products, $c_item);
+		        array_push($items, $items_item);
+	        }
+
             $platform["type"] = "wocoomerce";
             $platform["version"] = $woocommerce->version;
             $platform["language_version"] = phpversion();
