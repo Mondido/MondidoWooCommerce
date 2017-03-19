@@ -33,6 +33,14 @@ function custom_order_button_text($order_button_text) {
 	return $btn_text;
 }
 
+/**
+ * @deprecated
+ * @param $product_name
+ * @param $product_price
+ * @param $product_sku
+ *
+ * @return \WC_Product
+ */
 function create_mondido_product($product_name, $product_price, $product_sku)
 {
     $product_id = wc_get_product_id_by_sku($product_sku);
@@ -125,66 +133,84 @@ function create_mondido_coupon($coupon_name, $discount_price)
     return $coupon_code;
 }
 
+/**
+ * @todo Prevent double execution
+ * @param WC_Order $order
+ * @param array $transaction
+ */
 function update_order_with_incoming_products($order, $transaction)
 {
-    $incoming_product_items = $transaction["items"];
+	$mondido = new WC_Gateway_Mondido();
 
-    //Get all SKU:s for products in $order->items
-    $order_skus = array();
-    foreach ($order->get_items() as $item) 
-    {
-        $product = wc_get_product($item['product_id']);
-        if(isset($product))
-        {
-            $this_sku = $product->get_sku();
-            if(strlen($this_sku) > 0)
-            {
-                array_push($order_skus, $this_sku);
-            }
-        }
-    }
+	// Get order products
+	$skus = array();
+	$order_items = $order->get_items('line_item');
+	foreach ($order_items as $item) {
+		$product = $order->get_product_from_item( $item );
+		$sku = $product->get_sku();
+		if (empty($sku)) {
+			$sku = $product->get_id();
+		}
 
-    $order_items_updated = false;
-    //not valid products to create
-    $not_accepted = array("shipping", "frakt");
+		$skus[] = $sku;
+	}
 
-    foreach($incoming_product_items as $incoming_item)
-    {
-        if (in_array(strtolower($incoming_item['artno']), $not_accepted)) {
-            continue;
-        }
-        if (in_array(strtolower($incoming_item['description']), $not_accepted)) {
-            continue;
-        }
-        if (strlen(trim($incoming_item['artno'])) == 0){
-            continue; //since we don't have a artno we do not want to parse this. It's not created by Mondido
-        }
-        $item_not_present = true;
-        foreach ($order_skus as $sku)
-        {
-            if(strlen($incoming_item['artno']) == 0 || $incoming_item['artno'] == $sku)
-            {
-                $item_not_present = false;
-            }
-        }
-        if($item_not_present) // Mondido has added extra items to order
-        {
-            if(((float)$incoming_item["amount"])<0) //discount added by mondido, not yet implemented
-            {
-                //$order->add_coupon($incoming_item['name'].'-'.$incoming_item['id'], $incoming_item["amount"]);
-            }
-            else //additional product added by mondido, product cost is 0 or higher.
-            {
-                $order->add_product(create_mondido_product($incoming_item['description'], $incoming_item["amount"], $incoming_item['artno']),$incoming_item['qty']);
-            }
-            $order_items_updated = true;
-            //$order->set_total($order->order_total + $incoming_item["amount"]);
-        }
-    }
-    if($order_items_updated)
-    {
-        $order->set_total($transaction["amount"]);
-    }
+	// Get order fees
+	$fees = array();
+	$order_fees = $order->get_fees();
+	foreach ($order_fees as $item) {
+		$fees[] = strtolower($item['name']);
+	}
+
+	$reserved = array('shipping', 'discount');
+    $incoming_product_items = $transaction['items'];
+	file_put_contents(__DIR__ . '/mylog.txt', var_export($incoming_product_items, true) . "\n", FILE_APPEND);
+	foreach($incoming_product_items as $incoming_item) {
+		// Skip products which present in order
+		if (in_array($incoming_item['artno'], $skus)) {
+			continue;
+		}
+
+		// Skip reserved SKUs
+		if (in_array(strtolower($incoming_item['artno']), $reserved)) {
+			continue;
+		}
+
+		// There is can be products by Mondido like Invoice fee, discounts etc
+		// Skip product if fee already applied
+		if (in_array(strtolower($incoming_item['artno']), $fees)) {
+			continue;
+		}
+
+		// Apple fee
+		$amount = (float) $incoming_item['amount'];
+		$tax = (float) $incoming_item['vat'];
+
+		// Calculate taxes
+		$taxable = $mondido->tax_status === 'taxable';
+		$tax_class = $mondido->tax_class;
+		if ($taxable) {
+			// Mondido prices include tax
+			if (get_option( 'woocommerce_prices_include_tax' ) === 'no') {
+				$amount -= $tax;
+			}
+		}
+
+		$fee = new stdClass();
+		$fee->name = $incoming_item['description'];
+		$fee->amount = $amount;
+		$fee->taxable = $taxable;
+		$fee->tax_class = $tax_class;
+		$fee->tax = $tax;
+		$fee->tax_data = array();
+		$order->add_fee($fee);
+	}
+
+	// Calculate totals
+	$order->calculate_totals();
+
+	// Force to set total
+	$order->set_total($transaction['amount']);
 }
 
 function order_needs_payment_filter( $needs_payment, $instance, $valid_order_statuses ) { 
@@ -795,7 +821,7 @@ EOT;
             $shipping["description"] = "Shipping";
             $shipping_total = $crt->shipping_total + $crt->shipping_tax_total;
             $shipping["amount"] = $shipping_total;
-            $shipping["artno"] = 0;
+            $shipping["artno"] = 'shipping';
             if($crt->shipping_tax_total > 0){
                 $shipping["vat"] = $crt->shipping_tax_total;//($shipping_total / $crt->shipping_tax_total) *100;
             }else{
@@ -811,6 +837,8 @@ EOT;
                 $discount = array();
                 $discount["name"] = "Discount";
                 $discount["amount"] = number_format(0-($crt->discount_cart + $crt->discount_cart_tax), 2, '.', '');
+	            $discount["artno"] = 'discount';
+	            $discount['vat'] = 0;
                 array_push($items,$discount);
             }
             #vat weight attributes
