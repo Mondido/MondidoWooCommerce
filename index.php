@@ -1025,7 +1025,7 @@ HTML;
         }
         public function parse_webhook($transaction, $mondido){
             $mid = $mondido->get_merchant_id();
-            $mondido->logger->send(implode(',',$transaction), "parse_webhook","Merchant $mid");
+            $mondido->logger->send(var_export($transaction, true), "parse_webhook","Merchant $mid");
             $trans = $mondido->get_transaction($transaction["payment_ref"]);
             //check if this is already done!
             //check if we have the same transaction
