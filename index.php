@@ -1078,20 +1078,10 @@ HTML;
             {
                 if($transaction['transaction_type'] == 'recurring')
                 {
-                    $status = $transaction['status'];
-                    $ts = 'failed';
-                    if( $status == 'approved' )
-                    {
-                        $ts = 'completed';
-                    }
-                    $customer_id = $transaction['metadata']['customer']['id'];
-                     $order_data = array(
-                        'status'        => $ts,
-                        'customer_id'   => $customer_id,
-                        'customer_note' => '',
-                        'total'         => $transaction['amount'],
-                        'created_via'   => 'mondido',
-                    );
+                	// Please note:
+					// Configure custom webhook http://yourshop.local/?wc-api=wc_gateway_mondido
+					// To get recurring payments support in WooCommerce
+
                     //get subtotal and total
                     $prods = $transaction['metadata']['products'];
                     $pid = 0;
@@ -1102,11 +1092,19 @@ HTML;
                             $qty = $p['quantity'];
                         } 
                     }
-                    $mid = $transaction['id'];
-                    $mondido->logger->send("Cerating order for recurring order: $order->id", "parse_webhook","Merchant $mid");
+
                     $_SERVER['REMOTE_ADDR'] = '127.0.0.1'; // Required, else wc_create_order throws an exception
-                    $order  = wc_create_order( $order_data );
-                    add_post_meta($order->id, '_payment_method', 'mondido' );
+                    $order  = wc_create_order( array(
+	                    'status'        => $transaction['status'] === 'approved' ? 'completed' : 'failed',
+	                    'customer_id'   => $transaction['metadata']['customer']['id'],
+	                    'customer_note' => '',
+	                    'total'         => $transaction['amount'],
+	                    'created_via'   => 'mondido',
+                    ) );
+	                $mondido->logger->send("Cerating order for recurring order: $order->id", "parse_webhook","Merchant {$transaction['id']}");
+                    add_post_meta($order->id, '_payment_method', $this->id );
+	                update_post_meta( $order->id, '_transaction_id', $transaction['id'] );
+
                     $order->add_order_note( sprintf( __( 'Webhook callback created recurring order %s ', 'woocommerce' ), $transaction['id'] ));
                     $price_params = array( 'totals' => array( 'subtotal' => $transaction['amount'], 'total' => $transaction['amount'] ) );
                     $address = $this->get_address_from_transaction($transaction);
@@ -1119,7 +1117,8 @@ HTML;
                     {
                         WC()->mailer()->emails['WC_Email_Customer_Processing_Order']->trigger($order->id);
                     }
-                    WC()->mailer()->emails['WC_Email_New_Order']->trigger($order->id);                }
+                    WC()->mailer()->emails['WC_Email_New_Order']->trigger($order->id);
+                }
             }
             echo 'ok'; 
             http_response_code(200);
