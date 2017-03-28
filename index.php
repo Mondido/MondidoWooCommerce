@@ -1125,11 +1125,7 @@ HTML;
             die();
         }
         public static function marketing_footer($msg=null){
-            if(isset($_REQUEST['mondido_msg_holder'])){
-                echo $_REQUEST['mondido_msg_holder'];
-            }else{
-                echo '<script type="text/javascript" src="https://cdn-02.mondido.com/www/js/os-shop-v1.js"></script>';
-            }
+	        echo '<script type="text/javascript" src="https://cdn-02.mondido.com/www/js/os-shop-v1.js"></script>';
         }   
         public static function notification($msg){
             $output = str_replace(array("\r", "\n"), "", $msg);
