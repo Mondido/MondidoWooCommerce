@@ -33,6 +33,14 @@ function custom_order_button_text($order_button_text) {
 	return $btn_text;
 }
 
+/**
+ * @deprecated
+ * @param $product_name
+ * @param $product_price
+ * @param $product_sku
+ *
+ * @return \WC_Product
+ */
 function create_mondido_product($product_name, $product_price, $product_sku)
 {
     $product_id = wc_get_product_id_by_sku($product_sku);
@@ -125,66 +133,84 @@ function create_mondido_coupon($coupon_name, $discount_price)
     return $coupon_code;
 }
 
+/**
+ * @todo Prevent double execution
+ * @param WC_Order $order
+ * @param array $transaction
+ */
 function update_order_with_incoming_products($order, $transaction)
 {
-    $incoming_product_items = $transaction["items"];
+	$mondido = new WC_Gateway_Mondido();
 
-    //Get all SKU:s for products in $order->items
-    $order_skus = array();
-    foreach ($order->get_items() as $item) 
-    {
-        $product = wc_get_product($item['product_id']);
-        if(isset($product))
-        {
-            $this_sku = $product->get_sku();
-            if(strlen($this_sku) > 0)
-            {
-                array_push($order_skus, $this_sku);
-            }
-        }
-    }
+	// Get order products
+	$skus = array();
+	$order_items = $order->get_items('line_item');
+	foreach ($order_items as $item) {
+		$product = $order->get_product_from_item( $item );
+		$sku = $product->get_sku();
+		if (empty($sku)) {
+			$sku = $product->get_id();
+		}
 
-    $order_items_updated = false;
-    //not valid products to create
-    $not_accepted = array("shipping", "frakt");
+		$skus[] = $sku;
+	}
 
-    foreach($incoming_product_items as $incoming_item)
-    {
-        if (in_array(strtolower($incoming_item['artno']), $not_accepted)) {
-            continue;
-        }
-        if (in_array(strtolower($incoming_item['description']), $not_accepted)) {
-            continue;
-        }
-        if (strlen(trim($incoming_item['artno'])) == 0){
-            continue; //since we don't have a artno we do not want to parse this. It's not created by Mondido
-        }
-        $item_not_present = true;
-        foreach ($order_skus as $sku)
-        {
-            if(strlen($incoming_item['artno']) == 0 || $incoming_item['artno'] == $sku)
-            {
-                $item_not_present = false;
-            }
-        }
-        if($item_not_present) // Mondido has added extra items to order
-        {
-            if(((float)$incoming_item["amount"])<0) //discount added by mondido, not yet implemented
-            {
-                //$order->add_coupon($incoming_item['name'].'-'.$incoming_item['id'], $incoming_item["amount"]);
-            }
-            else //additional product added by mondido, product cost is 0 or higher.
-            {
-                $order->add_product(create_mondido_product($incoming_item['description'], $incoming_item["amount"], $incoming_item['artno']),$incoming_item['qty']);
-            }
-            $order_items_updated = true;
-            //$order->set_total($order->order_total + $incoming_item["amount"]);
-        }
-    }
-    if($order_items_updated)
-    {
-        $order->set_total($transaction["amount"]);
-    }
+	// Get order fees
+	$fees = array();
+	$order_fees = $order->get_fees();
+	foreach ($order_fees as $item) {
+		$fees[] = strtolower($item['name']);
+	}
+
+	$reserved = array('shipping', 'discount');
+    $incoming_product_items = $transaction['items'];
+	file_put_contents(__DIR__ . '/mylog.txt', var_export($incoming_product_items, true) . "\n", FILE_APPEND);
+	foreach($incoming_product_items as $incoming_item) {
+		// Skip products which present in order
+		if (in_array($incoming_item['artno'], $skus)) {
+			continue;
+		}
+
+		// Skip reserved SKUs
+		if (in_array(strtolower($incoming_item['artno']), $reserved)) {
+			continue;
+		}
+
+		// There is can be products by Mondido like Invoice fee, discounts etc
+		// Skip product if fee already applied
+		if (in_array(strtolower($incoming_item['artno']), $fees)) {
+			continue;
+		}
+
+		// Apple fee
+		$amount = (float) $incoming_item['amount'];
+		$tax = (float) $incoming_item['vat'];
+
+		// Calculate taxes
+		$taxable = $mondido->tax_status === 'taxable';
+		$tax_class = $mondido->tax_class;
+		if ($taxable) {
+			// Mondido prices include tax
+			if (get_option( 'woocommerce_prices_include_tax' ) === 'no') {
+				$amount -= $tax;
+			}
+		}
+
+		$fee = new stdClass();
+		$fee->name = $incoming_item['description'];
+		$fee->amount = $amount;
+		$fee->taxable = $taxable;
+		$fee->tax_class = $tax_class;
+		$fee->tax = $tax;
+		$fee->tax_data = array();
+		$order->add_fee($fee);
+	}
+
+	// Calculate totals
+	$order->calculate_totals();
+
+	// Force to set total
+	$order->set_total($transaction['amount']);
 }
 
 function order_needs_payment_filter( $needs_payment, $instance, $valid_order_statuses ) { 
@@ -613,7 +639,7 @@ EOT;
                     'title' => __('Authorize', 'mondido'),
                     'type' => 'checkbox',
                     'label' => __('Reserve money, do not auto-capture.', 'mondido'),
-                    'default' => 'yes'),
+                    'default' => 'no'),
 
                 'tax_class' => array(
                     'title' => __('Tax class for payment fees', 'mondido'),
@@ -795,7 +821,7 @@ EOT;
             $shipping["description"] = "Shipping";
             $shipping_total = $crt->shipping_total + $crt->shipping_tax_total;
             $shipping["amount"] = $shipping_total;
-            $shipping["artno"] = 0;
+            $shipping["artno"] = 'shipping';
             if($crt->shipping_tax_total > 0){
                 $shipping["vat"] = $crt->shipping_tax_total;//($shipping_total / $crt->shipping_tax_total) *100;
             }else{
@@ -811,63 +837,62 @@ EOT;
                 $discount = array();
                 $discount["name"] = "Discount";
                 $discount["amount"] = number_format(0-($crt->discount_cart + $crt->discount_cart_tax), 2, '.', '');
+	            $discount["artno"] = 'discount';
+	            $discount['vat'] = 0;
                 array_push($items,$discount);
             }
             #vat weight attributes
             $has_plan_id = false;
             $subscription_quantity = 1;
-            foreach($cart as $item){
-                try{
-                    $c_item = array();
-                    $items_item = array();
-                    $c_item["id"] = $item['product_id'];
-                    $c_item["quantity"] = $item['quantity'];
-                    $price_inc_tax = number_format($item['line_total'], 2, '.', '') +  number_format($item['line_tax'], 2, '.', '');
-                    $price_ex_tax = number_format($item['line_total'], 2, '.', '');
-                    $tax = number_format($item['line_tax'], 2, '.', '');
-                    $tax_perc = ($tax / $price_inc_tax) * 100;
-                    if($has_plan_id == false)
-                    {    
-                        $plan_id = get_post_meta( $item["product_id"], '_plan_id', true );
-                        if(intval($plan_id) > 0)
-                        {
-                            $has_plan_id = true;
-                            $c_item["plan_id"] = $plan_id; 
-                            $c_item["product_type"] = 'recurring'; 
-                            $subscription_quantity = $item['quantity'];
-                        }
-                        else 
-                        {
-                            $c_item["product_type"] = 'normal'; 
-                        }
-                    }
-                    $prod = new WC_Product($item["product_id"]);
-                    
-                    $c_item["image"] = $this->get_img_url($prod->get_image());
-                    $c_item["weight"] = $prod->get_weight();
-                    $c_item["vat"] = $tax;
-                    $c_item["amount"] = $price_inc_tax;
-                    $c_item["shipping_class"] = $prod->shipping_class;
-                    $c_item["name"] = $prod->post->post_title;
-                    $c_item["url"] = $prod->post->guid;
-                //invoice item
-                    $items_item["artno"] = $prod->get_sku();
-                    if(empty($items_item["artno"])){
-                        $items_item["artno"] = $prod->id;
-                    }
-                    $qty = $item['quantity'];
-                    $items_item["vat"] = $tax;
-                    $items_item["amount"] = $price_inc_tax;
-                    $items_item["description"] = $prod->post->post_title;
-                    $items_item["qty"] = $item['quantity'];
-                    $items_item["discount"] = 0;
-                    array_push($products,$c_item);
-                    array_push($items,$items_item);
-                }catch (Exception $e) {
-                    array_push($plugin_log,$e);
-                    
-                }
-            }
+	        foreach ( $order->get_items() as $order_item ) {
+	        	$product_id = $order_item['product_id'];
+		        $price        = $order->get_line_subtotal( $order_item, false, false );
+		        $priceWithTax = $order->get_line_subtotal( $order_item, true, false );
+		        $tax          = $priceWithTax - $price;
+		        //$taxPercent   = ( $tax > 0 ) ? round( 100 / ( $price / $tax ) ) : 0;
+
+		        $c_item = array();
+		        $items_item = array();
+		        $c_item['id'] = $product_id;
+		        $c_item['quantity'] = $order_item['qty'];
+
+		        if ($has_plan_id == false) {
+			        $plan_id = get_post_meta( $product_id, '_plan_id', true );
+			        if ((int) $plan_id > 0) {
+				        $has_plan_id = true;
+				        $c_item['plan_id'] = $plan_id;
+				        $c_item['product_type'] = 'recurring';
+				        $subscription_quantity = $order_item['qty'];
+			        } else {
+				        $c_item['product_type'] = 'normal';
+			        }
+		        }
+
+		        $prod = wc_get_product($product_id);
+
+		        $c_item['image'] = $this->get_img_url($prod->get_image());
+		        $c_item['weight'] = $prod->get_weight();
+		        $c_item['vat'] = number_format($tax, 2, '.', '');
+		        $c_item['amount'] = number_format($priceWithTax, 2, '.', '');
+		        $c_item['shipping_class'] = $prod->shipping_class;
+		        $c_item['name'] = $order_item['name'];
+		        $c_item['url'] = $prod->post->guid;
+
+		        // Invoice item
+		        $items_item['artno'] = $prod->get_sku();
+		        if (empty($items_item['artno'])) {
+			        $items_item['artno'] = $prod->id;
+		        }
+
+		        $items_item['vat'] = number_format($tax, 2, '.', '');
+		        $items_item['amount'] = number_format($priceWithTax, 2, '.', '');
+		        $items_item['description'] = $order_item['name'];
+		        $items_item['qty'] = $order_item['qty'];
+		        $items_item['discount'] = 0;
+		        array_push($products, $c_item);
+		        array_push($items, $items_item);
+	        }
+
             $platform["type"] = "wocoomerce";
             $platform["version"] = $woocommerce->version;
             $platform["language_version"] = phpversion();
@@ -1000,7 +1025,7 @@ HTML;
         }
         public function parse_webhook($transaction, $mondido){
             $mid = $mondido->get_merchant_id();
-            $mondido->logger->send(implode(',',$transaction), "parse_webhook","Merchant $mid");
+            $mondido->logger->send(var_export($transaction, true), "parse_webhook","Merchant $mid");
             $trans = $mondido->get_transaction($transaction["payment_ref"]);
             //check if this is already done!
             //check if we have the same transaction
@@ -1053,20 +1078,10 @@ HTML;
             {
                 if($transaction['transaction_type'] == 'recurring')
                 {
-                    $status = $transaction['status'];
-                    $ts = 'failed';
-                    if( $status == 'approved' )
-                    {
-                        $ts = 'completed';
-                    }
-                    $customer_id = $transaction['metadata']['customer']['id'];
-                     $order_data = array(
-                        'status'        => $ts,
-                        'customer_id'   => $customer_id,
-                        'customer_note' => '',
-                        'total'         => $transaction['amount'],
-                        'created_via'   => 'mondido',
-                    );
+                	// Please note:
+					// Configure custom webhook http://yourshop.local/?wc-api=wc_gateway_mondido
+					// To get recurring payments support in WooCommerce
+
                     //get subtotal and total
                     $prods = $transaction['metadata']['products'];
                     $pid = 0;
@@ -1077,11 +1092,19 @@ HTML;
                             $qty = $p['quantity'];
                         } 
                     }
-                    $mid = $transaction['id'];
-                    $mondido->logger->send("Cerating order for recurring order: $order->id", "parse_webhook","Merchant $mid");
+
                     $_SERVER['REMOTE_ADDR'] = '127.0.0.1'; // Required, else wc_create_order throws an exception
-                    $order  = wc_create_order( $order_data );
-                    add_post_meta($order->id, '_payment_method', 'mondido' );
+                    $order  = wc_create_order( array(
+	                    'status'        => $transaction['status'] === 'approved' ? 'completed' : 'failed',
+	                    'customer_id'   => $transaction['metadata']['customer']['id'],
+	                    'customer_note' => '',
+	                    'total'         => $transaction['amount'],
+	                    'created_via'   => 'mondido',
+                    ) );
+	                $mondido->logger->send("Cerating order for recurring order: $order->id", "parse_webhook","Merchant {$transaction['id']}");
+                    add_post_meta($order->id, '_payment_method', $this->id );
+	                update_post_meta( $order->id, '_transaction_id', $transaction['id'] );
+
                     $order->add_order_note( sprintf( __( 'Webhook callback created recurring order %s ', 'woocommerce' ), $transaction['id'] ));
                     $price_params = array( 'totals' => array( 'subtotal' => $transaction['amount'], 'total' => $transaction['amount'] ) );
                     $address = $this->get_address_from_transaction($transaction);
@@ -1094,18 +1117,15 @@ HTML;
                     {
                         WC()->mailer()->emails['WC_Email_Customer_Processing_Order']->trigger($order->id);
                     }
-                    WC()->mailer()->emails['WC_Email_New_Order']->trigger($order->id);                }
+                    WC()->mailer()->emails['WC_Email_New_Order']->trigger($order->id);
+                }
             }
             echo 'ok'; 
             http_response_code(200);
             die();
         }
         public static function marketing_footer($msg=null){
-            if(isset($_REQUEST['mondido_msg_holder'])){
-                echo $_REQUEST['mondido_msg_holder'];
-            }else{
-                echo '<script type="text/javascript" src="https://cdn-02.mondido.com/www/js/os-shop-v1.js"></script>';
-            }
+	        echo '<script type="text/javascript" src="https://cdn-02.mondido.com/www/js/os-shop-v1.js"></script>';
         }   
         public static function notification($msg){
             $output = str_replace(array("\r", "\n"), "", $msg);
