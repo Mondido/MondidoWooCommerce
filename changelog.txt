@@ -1,0 +1,24 @@
+*** WooCommerce Mondido Payments Gateway Changelog ***
+
+2017-01-26 - version 3.5.1
+* Marketing script fix
+* Fixed Mondido Subscriptions support
+* Fixed error in webhook handler (multilevel transaction data issue)
+* Make "reserve payment" not default in module settings
+* Improved Mondido fee support
+* Fixed product items data
+
+2017-01-26 - version 3.5
+* Updated order status on authorized payments
+* Tax settings for payment fee
+* Masterpass settings
+
+2017-01-10 - version 3.4.9
+* Editable checkout text
+* Fix for double "complete" on wewbhook and redirect callbacks
+
+2016-12-22 - version 3.4.7 (XMAS EDITION 2)
+* Editable button text
+
+2016-12-20 - version 3.4.5 (XMAS EDITION)
+* Fixed amount for items
