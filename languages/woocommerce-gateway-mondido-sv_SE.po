@@ -1,0 +1,348 @@
+msgid ""
+msgstr ""
+"Project-Id-Version: \n"
+"POT-Creation-Date: 2017-03-28 12:33+0600\n"
+"PO-Revision-Date: 2017-03-28 12:33+0600\n"
+"Last-Translator: aait <info@aait.se>\n"
+"Language-Team: \n"
+"Language: sv_SE\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"X-Generator: Poedit 1.8.7.1\n"
+"X-Poedit-Basepath: .\n"
+"Plural-Forms: nplurals=2; plural=(n != 1);\n"
+"X-Poedit-KeywordsList: __;_e;_e(sprintf\n"
+"X-Poedit-SearchPath-0: ..\n"
+
+#: ../includes/class-wc-gateway-mondido-abstract.php:17
+msgid "Standard"
+msgstr ""
+
+#: ../includes/class-wc-gateway-mondido-abstract.php:244
+#: ../woocommerce-gateway-mondido.php:192
+#: ../woocommerce-gateway-mondido.php:205
+#, php-format
+msgid "Error: %s"
+msgstr ""
+
+#: ../includes/class-wc-gateway-mondido-abstract.php:247
+#, php-format
+msgid "Refunded: %s. Transaction ID: %s. Reason: %s"
+msgstr ""
+
+#: ../includes/class-wc-gateway-mondido-hw.php:13
+msgid "Mondido"
+msgstr ""
+
+#: ../includes/class-wc-gateway-mondido-hw.php:44
+#: ../includes/class-wc-gateway-mondido-hw.php:106
+#: ../woocommerce-gateway-mondido.php:120
+msgid "Mondido Payments"
+msgstr ""
+
+#: ../includes/class-wc-gateway-mondido-hw.php:55
+#: ../includes/class-wc-gateway-mondido-hw.php:187
+msgid "Pay with Mondido"
+msgstr ""
+
+#: ../includes/class-wc-gateway-mondido-hw.php:97
+msgid "Enable/Disable"
+msgstr ""
+
+#: ../includes/class-wc-gateway-mondido-hw.php:99
+msgid "Enable Mondido Payment Module"
+msgstr ""
+
+#: ../includes/class-wc-gateway-mondido-hw.php:103
+msgid "Title"
+msgstr ""
+
+#: ../includes/class-wc-gateway-mondido-hw.php:105
+msgid "This controls the title which the user sees during checkout."
+msgstr ""
+
+#: ../includes/class-wc-gateway-mondido-hw.php:109
+msgid "Description"
+msgstr ""
+
+#: ../includes/class-wc-gateway-mondido-hw.php:111
+msgid "This controls the description which the user sees during checkout."
+msgstr ""
+
+#: ../includes/class-wc-gateway-mondido-hw.php:115
+msgid "Merchant ID"
+msgstr ""
+
+#: ../includes/class-wc-gateway-mondido-hw.php:117
+msgid "Merchant ID for Mondido"
+msgstr ""
+
+#: ../includes/class-wc-gateway-mondido-hw.php:121
+msgid "Secret"
+msgstr ""
+
+#: ../includes/class-wc-gateway-mondido-hw.php:123
+msgid "Given secret code from Mondido"
+msgstr ""
+
+#: ../includes/class-wc-gateway-mondido-hw.php:127
+msgid "API Password"
+msgstr ""
+
+#: ../includes/class-wc-gateway-mondido-hw.php:129
+msgid "API Password from Mondido"
+msgstr ""
+
+#: ../includes/class-wc-gateway-mondido-hw.php:133
+msgid "Test Mode"
+msgstr ""
+
+#: ../includes/class-wc-gateway-mondido-hw.php:135
+msgid "Set in testmode"
+msgstr ""
+
+#: ../includes/class-wc-gateway-mondido-hw.php:139
+msgid "Authorize"
+msgstr ""
+
+#: ../includes/class-wc-gateway-mondido-hw.php:141
+msgid "Reserve money, do not auto-capture"
+msgstr ""
+
+#: ../includes/class-wc-gateway-mondido-hw.php:145
+msgid "Tax status for payment fees"
+msgstr ""
+
+#: ../includes/class-wc-gateway-mondido-hw.php:148
+msgid "None"
+msgstr ""
+
+#: ../includes/class-wc-gateway-mondido-hw.php:149
+msgid "Taxable"
+msgstr ""
+
+#: ../includes/class-wc-gateway-mondido-hw.php:151
+msgid "If any payment fee should be taxable"
+msgstr ""
+
+#: ../includes/class-wc-gateway-mondido-hw.php:155
+msgid "Tax class for payment fees"
+msgstr ""
+
+#: ../includes/class-wc-gateway-mondido-hw.php:158
+msgid ""
+"If you have a fee for invoice payments, what tax class should be applied to "
+"that fee"
+msgstr ""
+
+#: ../includes/class-wc-gateway-mondido-hw.php:169
+msgid "Logos"
+msgstr ""
+
+#: ../includes/class-wc-gateway-mondido-hw.php:170
+msgid "Logos on checkout"
+msgstr ""
+
+#: ../includes/class-wc-gateway-mondido-hw.php:173
+msgid "Visa"
+msgstr ""
+
+#: ../includes/class-wc-gateway-mondido-hw.php:174
+msgid "MasterCard"
+msgstr ""
+
+#: ../includes/class-wc-gateway-mondido-hw.php:175
+msgid "American Express"
+msgstr ""
+
+#: ../includes/class-wc-gateway-mondido-hw.php:176
+msgid "Diners Club"
+msgstr ""
+
+#: ../includes/class-wc-gateway-mondido-hw.php:177
+msgid "Direktbank"
+msgstr ""
+
+#: ../includes/class-wc-gateway-mondido-hw.php:178
+msgid "Invoice/PartPayment"
+msgstr ""
+
+#: ../includes/class-wc-gateway-mondido-hw.php:179
+msgid "PayPal"
+msgstr ""
+
+#: ../includes/class-wc-gateway-mondido-hw.php:180
+msgid "MasterPass"
+msgstr ""
+
+#: ../includes/class-wc-gateway-mondido-hw.php:185
+msgid "Text for \"Place Order\" button"
+msgstr ""
+
+#: ../includes/class-wc-gateway-mondido-hw.php:297
+msgid "Discount"
+msgstr ""
+
+#: ../includes/class-wc-gateway-mondido-hw.php:440
+msgid "Payment Reference verification failed"
+msgstr ""
+
+#: ../includes/class-wc-gateway-mondido-hw.php:448
+msgid "Failed to verify transaction"
+msgstr ""
+
+#: ../includes/class-wc-gateway-mondido-hw.php:464
+msgid "Hash verification failed"
+msgstr ""
+
+#: ../includes/class-wc-gateway-mondido-hw.php:477
+#: ../includes/class-wc-gateway-mondido-hw.php:672
+#, php-format
+msgid "Payment pending. Transaction Id: %s"
+msgstr ""
+
+#: ../includes/class-wc-gateway-mondido-hw.php:482
+#: ../includes/class-wc-gateway-mondido-hw.php:677
+#, php-format
+msgid "Payment completed. Transaction Id: %s"
+msgstr ""
+
+#: ../includes/class-wc-gateway-mondido-hw.php:488
+#: ../includes/class-wc-gateway-mondido-hw.php:683
+#, php-format
+msgid "Payment authorized. Transaction Id: %s"
+msgstr ""
+
+#: ../includes/class-wc-gateway-mondido-hw.php:492
+#: ../includes/class-wc-gateway-mondido-hw.php:687
+msgid "Payment declined."
+msgstr ""
+
+#: ../includes/class-wc-gateway-mondido-hw.php:495
+#: ../includes/class-wc-gateway-mondido-hw.php:690
+msgid "Payment failed."
+msgstr ""
+
+#: ../includes/class-wc-gateway-mondido-hw.php:527
+#: ../includes/class-wc-gateway-mondido-hw.php:722
+#, php-format
+msgid "Invoice Address: %s"
+msgstr ""
+
+#: ../includes/class-wc-gateway-mondido-hw.php:584
+#, php-format
+msgid "Created recurring order by WebHook. Transaction Id %s"
+msgstr ""
+
+#: ../includes/class-wc-gateway-mondido-hw.php:588
+#, php-format
+msgid "Subscription #%s "
+msgstr ""
+
+#: ../templates/admin/admin-options.php:11
+msgid "Mondido, Simple payments, smart functions"
+msgstr ""
+
+#: ../templates/admin/admin-options.php:15
+#, php-format
+msgid ""
+"Please go to <a href=\"%s\" target=\"_blank\">%s</a> to sign up and get hold "
+"of your account information that you need to enter here."
+msgstr ""
+
+#: ../templates/admin/admin-options.php:21
+msgid ""
+"Do not hesitate to contact support@mondido.com if you have any questions "
+"setting up your WooCommerce payment plugin."
+msgstr ""
+
+#: ../templates/admin/admin-options.php:26
+#, php-format
+msgid ""
+"All settings below can be found at this location: <a href=\"%s\" target="
+"\"_blank\">%s</a> after you have logged in."
+msgstr ""
+
+#: ../templates/admin/payment-actions.php:11
+msgid "Payment Info"
+msgstr ""
+
+#: ../templates/admin/payment-actions.php:13
+msgid "Type"
+msgstr ""
+
+#: ../templates/admin/payment-actions.php:15
+msgid "Number"
+msgstr ""
+
+#: ../templates/admin/payment-actions.php:17
+msgid "Name"
+msgstr ""
+
+#: ../templates/admin/payment-actions.php:19
+msgid "Card"
+msgstr ""
+
+#: ../templates/admin/payment-actions.php:21
+msgid "Status"
+msgstr ""
+
+#: ../templates/admin/payment-actions.php:24
+msgid "3D Secure"
+msgstr ""
+
+#: ../templates/admin/payment-actions.php:24
+msgid "No"
+msgstr ""
+
+#: ../templates/admin/payment-actions.php:24
+msgid "Yes"
+msgstr ""
+
+#: ../templates/admin/payment-actions.php:27
+msgid "Payment Link"
+msgstr ""
+
+#: ../templates/admin/payment-actions.php:29
+msgid "View at Mondido"
+msgstr ""
+
+#: ../templates/admin/payment-actions.php:37
+msgid "Capture Payment"
+msgstr ""
+
+#: ../templates/checkout/payment-fields.php:19
+#, php-format
+msgid "Pay with %s on Mondido"
+msgstr ""
+
+#: ../woocommerce-gateway-mondido.php:70
+msgid "Settings"
+msgstr ""
+
+#: ../woocommerce-gateway-mondido.php:165
+msgid "Please wait..."
+msgstr ""
+
+#: ../woocommerce-gateway-mondido.php:198
+#, php-format
+msgid "Response: %s"
+msgstr ""
+
+#: ../woocommerce-gateway-mondido.php:216
+#, php-format
+msgid "Payment captured. Transaction Id: %s"
+msgstr ""
+
+#: ../woocommerce-gateway-mondido.php:234
+msgid "Mondido Subscription"
+msgstr ""
+
+#: ../woocommerce-gateway-mondido.php:252
+msgid "No subscription"
+msgstr ""
+
+#: ../woocommerce-gateway-mondido.php:268
+msgid "Subscription plan"
+msgstr ""
