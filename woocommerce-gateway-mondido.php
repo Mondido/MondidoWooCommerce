@@ -46,7 +46,7 @@ class WC_Mondido_Payments {
 		// Mondido Subscriptions
 		add_filter( 'woocommerce_product_data_tabs', __CLASS__ . '::add_product_tabs' );
 		add_action( 'woocommerce_product_data_panels', __CLASS__ . '::subscription_options_product_tab_content' );
-		add_action( 'woocommerce_process_product_meta_mondido_subscription', __CLASS__ . '::save_subscription_field' );
+		add_action( 'woocommerce_process_product_meta', __CLASS__ . '::save_subscription_field' );
 		add_filter( 'woocommerce_cart_needs_payment', __CLASS__ . '::cart_needs_payment', 10, 2 );
 		add_filter( 'woocommerce_order_needs_payment', __CLASS__ . '::order_needs_payment', 10, 3 );
 		add_filter( 'woocommerce_mondido_form_fields', array(
