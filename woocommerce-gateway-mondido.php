@@ -57,6 +57,9 @@ class WC_Mondido_Payments {
 
 		// Add Marketing script
 		add_action( 'wp_footer', __CLASS__ . '::marketing_script' );
+
+		// WC_Order Compatibility for WC < 3.0
+        add_action( 'woocommerce_init', __CLASS__ . '::add_compatibility' );
 	}
 
 	/**
@@ -113,8 +116,8 @@ class WC_Mondido_Payments {
 	public static function add_meta_boxes() {
 		global $post_id;
 		$order = wc_get_order( $post_id );
-		if ( $order && in_array( $order->payment_method, array( 'mondido_hw' ) ) ) {
-			$transaction = get_post_meta( $order->id, '_mondido_transaction_data', TRUE );
+		if ( $order && in_array( $order->get_payment_method(), array( 'mondido_hw' ) ) ) {
+			$transaction = get_post_meta( $order->get_id(), '_mondido_transaction_data', TRUE );
 			if ( ! empty( $transaction ) ) {
 				add_meta_box(
 					'mondido_paymnt_actions',
@@ -135,7 +138,7 @@ class WC_Mondido_Payments {
 	public static function order_meta_box_payment_actions() {
 		global $post_id;
 		$order       = wc_get_order( $post_id );
-		$transaction = get_post_meta( $order->id, '_mondido_transaction_data', TRUE );
+		$transaction = get_post_meta( $order->get_id(), '_mondido_transaction_data', TRUE );
 
 		wc_get_template(
 			'admin/payment-actions.php',
@@ -210,9 +213,9 @@ class WC_Mondido_Payments {
 
 		if ( $transaction['status'] === 'approved' ) {
 			// Save Transaction
-			update_post_meta( $order->id, '_transaction_id', $transaction['id'] );
-			update_post_meta( $order->id, '_mondido_transaction_status', $transaction['status'] );
-			update_post_meta( $order->id, '_mondido_transaction_data', $transaction );
+			update_post_meta( $order->get_id(), '_transaction_id', $transaction['id'] );
+			update_post_meta( $order->get_id(), '_mondido_transaction_status', $transaction['status'] );
+			update_post_meta( $order->get_id(), '_mondido_transaction_data', $transaction );
 
 			$order->add_order_note( sprintf( __( 'Payment captured. Transaction Id: %s', 'woocommerce-gateway-mondido' ), $transaction['id'] ) );
 			$order->payment_complete( $transaction['id'] );
@@ -325,7 +328,12 @@ class WC_Mondido_Payments {
 	public static function order_needs_payment( $needs_payment, $order, $valid_order_statuses ) {
 		if ( $needs_payment === FALSE ) {
 			foreach ( $order->get_items( 'line_item' ) as $order_item ) {
-				$plan_id = get_post_meta( $order_item['product_id'], '_mondido_plan_id', TRUE );
+				if ( version_compare( WC()->version, '3.0', '>=' ) ) {
+					$plan_id = get_post_meta( $order_item->get_product_id(), '_mondido_plan_id', TRUE );
+				} else {
+					$plan_id = get_post_meta( $order_item['product_id'], '_mondido_plan_id', TRUE );
+				}
+
 				if ( (int) $plan_id > 0 ) {
 					return TRUE;
 				}
@@ -346,7 +354,12 @@ class WC_Mondido_Payments {
 	 */
 	public function add_recurring_items( $fields, $order, $gateway ) {
 		foreach ( $order->get_items( 'line_item' ) as $order_item ) {
-			$plan_id = get_post_meta( $order_item['product_id'], '_mondido_plan_id', TRUE );
+			if ( version_compare( WC()->version, '3.0', '>=' ) ) {
+				$plan_id = get_post_meta( $order_item->get_product_id(), '_mondido_plan_id', TRUE );
+			} else {
+				$plan_id = get_post_meta( $order_item['product_id'], '_mondido_plan_id', TRUE );
+			}
+
 			if ( (int) $plan_id > 0 ) {
 				$fields['plan_id']               = $plan_id;
 				$fields['subscription_quantity'] = $order_item['qty'];
@@ -382,6 +395,15 @@ class WC_Mondido_Payments {
 		<script type="text/javascript" src="https://cdn-02.mondido.com/www/js/os-shop-v1.js"></script>
 		<?php
 	}
+
+    /**
+     * WC_Order Compatibility for WC < 3.0
+     */
+	public static function add_compatibility() {
+		if ( version_compare( WC()->version, '3.0', '<' ) ) {
+			include_once( dirname( __FILE__ ) . '/includes/deprecated/class-wc-order-compatibility-mondido.php' );
+		}
+    }
 }
 
 new WC_Mondido_Payments();

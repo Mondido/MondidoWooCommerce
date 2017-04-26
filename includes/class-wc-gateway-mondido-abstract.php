@@ -37,6 +37,14 @@ abstract class WC_Gateway_Mondido_Abstract extends WC_Payment_Gateway {
 	}
 
 	/**
+	 * Check is WooCommerce >= 3.0
+	 * @return mixed
+	 */
+	public static function is_wc3() {
+		return version_compare( WC()->version, '3.0', '>=' );
+	}
+
+	/**
 	 * Lookup transaction data
 	 *
 	 * @param $transaction_id
@@ -122,13 +130,32 @@ abstract class WC_Gateway_Mondido_Abstract extends WC_Payment_Gateway {
 	 * @return void
 	 */
 	public function updateOrderWithIncomingProducts( $order, array $transaction ) {
-		// Get IDs of Products
-		$items = $order->get_items( 'line_item' );
-		$ids   = array_column( $items, 'product_id' );
+		if (self::is_wc3()) {
+			// Get IDs of Products
+			$ids = array();
+			$items = $order->get_items( 'line_item' );
+			foreach ($items as $item) {
+				/** @var WC_Order_Item_Product $item */
+				$ids[] = $item->get_product_id();
+			}
 
-		// Get Fee names
-		$fees      = $order->get_fees();
-		$fee_names = array_column( $fees, 'name' );
+			// Get Fee names
+			$fee_names = array();
+			$items = $order->get_fees();
+			foreach ($items as $item) {
+				/** @var WC_Order_Item_Fee $item */
+				$fee_names[] = $item->get_name();
+			}
+
+		} else {
+			// Get IDs of Products
+			$items = $order->get_items( 'line_item' );
+			$ids   = array_column( $items, 'product_id' );
+
+			// Get Fee names
+			$fees      = $order->get_fees();
+			$fee_names = array_column( $fees, 'name' );
+		}
 
 		$incoming_items = $transaction['items'];
 		foreach ( $incoming_items as $incoming_item ) {
@@ -146,6 +173,11 @@ abstract class WC_Gateway_Mondido_Abstract extends WC_Payment_Gateway {
 			} else {
 				$product_id = wc_get_product_id_by_sku( $incoming_item['artno'] );
 			}
+
+			// Invalid Product Id
+            if ( empty( $product_id ) ) {
+                continue;
+            }
 
 			// Skip products which present in order
 			if ( $product_id && in_array( $product_id, $ids ) ) {
