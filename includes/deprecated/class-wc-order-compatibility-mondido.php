@@ -200,6 +200,16 @@ class WC_Order_Compatibility_Mondido {
 	}
 
 	/**
+	 * Gets order currency.
+	 *
+	 * @param  string $context
+	 * @return string
+	 */
+	public function get_currency( $context = 'view' ) {
+		return $this->obj->get_order_currency();
+	}
+
+	/**
 	 * Override Class
 	 *
 	 * @param $classname

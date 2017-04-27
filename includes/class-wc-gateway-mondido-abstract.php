@@ -40,8 +40,37 @@ abstract class WC_Gateway_Mondido_Abstract extends WC_Payment_Gateway {
 	 * Check is WooCommerce >= 3.0
 	 * @return mixed
 	 */
-	public static function is_wc3() {
+	public function is_wc3() {
 		return version_compare( WC()->version, '3.0', '>=' );
+	}
+
+	/**
+	 * Add Fee to Order
+	 * @param stdClass $fee
+	 * @param WC_Order $order
+	 *
+	 * @return int
+	 */
+	public function add_order_fee($fee, &$order) {
+		if ($this->is_wc3()) {
+			$item = new WC_Order_Item_Fee();
+			$item->set_props( array(
+				'name'      => $fee->name,
+				'tax_class' => $fee->taxable ? $fee->tax_class : 0,
+				'total'     => $fee->amount,
+				'total_tax' => $fee->tax,
+				'taxes'     => array(
+					'total' => $fee->tax_data,
+				),
+				'order_id'  => $order->get_id(),
+			) );
+			$item->save();
+
+			$order->add_item( $item );
+			return $item->get_id();
+		}
+
+		return $order->add_fee( $fee );
 	}
 
 	/**
@@ -130,7 +159,7 @@ abstract class WC_Gateway_Mondido_Abstract extends WC_Payment_Gateway {
 	 * @return void
 	 */
 	public function updateOrderWithIncomingProducts( $order, array $transaction ) {
-		if (self::is_wc3()) {
+		if ($this->is_wc3()) {
 			// Get IDs of Products
 			$ids = array();
 			$items = $order->get_items( 'line_item' );
@@ -214,7 +243,7 @@ abstract class WC_Gateway_Mondido_Abstract extends WC_Payment_Gateway {
 			$fee->tax_class = $tax_class;
 			$fee->tax       = $tax;
 			$fee->tax_data  = array();
-			$order->add_fee( $fee );
+			$this->add_order_fee($fee, $order);
 		}
 
 		// Calculate totals

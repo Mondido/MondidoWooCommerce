@@ -260,7 +260,8 @@ class WC_Gateway_Mondido_HW extends WC_Gateway_Mondido_Abstract {
 
 		// Add Products
 		foreach ( $order->get_items() as $order_item ) {
-			$product      = wc_get_product( $order_item['product_id'] );
+			$product_id = $this->is_wc3() ? $order_item->get_product_id() : $order_item['product_id'];
+			$product      = wc_get_product( $product_id );
 			$sku          = $product->get_sku();
 			$price        = $order->get_line_subtotal( $order_item, FALSE, FALSE );
 			$priceWithTax = $order->get_line_subtotal( $order_item, TRUE, FALSE );
@@ -269,9 +270,9 @@ class WC_Gateway_Mondido_HW extends WC_Gateway_Mondido_Abstract {
 
 			$items[] = array(
 				'artno'       => empty( $sku ) ? 'product_id' . $product->get_id() : $sku,
-				'description' => $order_item['name'],
+				'description' => $this->is_wc3() ? $order_item->get_name() : $order_item['name'],
 				'amount'      => number_format( $priceWithTax, 2, '.', '' ),
-				'qty'         => $order_item['qty'],
+				'qty'         => $this->is_wc3() ? $order_item->get_quantity() : $order_item['qty'],
 				'vat'         => number_format( $taxPercent, 2, '.', '' ),
 				'discount'    => 0
 			);
@@ -305,12 +306,23 @@ class WC_Gateway_Mondido_HW extends WC_Gateway_Mondido_Abstract {
 
 		// Add Fees
 		foreach ( $order->get_fees() as $fee ) {
-			$taxPercent = ( $fee['line_tax'] > 0 ) ? round( 100 / ( $fee['line_total'] / $fee['line_tax'] ) ) : 0;
+			if ($this->is_wc3()) {
+				/** @var WC_Order_Item_Fee $fee */
+				$fee_name = $fee->get_name();
+				$fee_total = $fee->get_total();
+				$fee_tax = $fee->get_total_tax();
+			} else {
+				$fee_name = $fee['name'];
+				$fee_total = $fee['line_total'];
+				$fee_tax = $fee['line_tax'];
+			}
+
+			$taxPercent = ( $fee_tax > 0 ) ? round( 100 / ( $fee_total / $fee_tax ) ) : 0;
 
 			$items[] = array(
 				'artno'       => 'fee',
-				'description' => $fee['name'],
-				'amount'      => number_format( $fee['line_total'] + $fee['line_tax'], 2, '.', '' ),
+				'description' => $fee_name,
+				'amount'      => number_format( $fee['line_total'] + $fee_tax, 2, '.', '' ),
 				'qty'         => 1,
 				'vat'         => number_format( $taxPercent, 2, '.', '' ),
 				'discount'    => 0
@@ -365,7 +377,7 @@ class WC_Gateway_Mondido_HW extends WC_Gateway_Mondido_Abstract {
 			'amount'       => number_format( $order->get_total(), 2, '.', '' ),
 			'vat_amount'   => number_format( $order->get_total_tax(), 2, '.', '' ),
 			'merchant_id'  => $this->merchant_id,
-			'currency'     => $order->get_order_currency(),
+			'currency'     => $order->get_currency(),
 			'customer_ref' => $order->get_user_id() != '0' ? $order->get_user_id() : '',
 			'payment_ref'  => $order->get_id(),
 			'success_url'  => $this->get_return_url( $order ),
@@ -457,7 +469,7 @@ class WC_Gateway_Mondido_HW extends WC_Gateway_Mondido_Abstract {
 			$payment_ref,
 			$order->get_user_id() != '0' ? $order->get_user_id() : '',
 			number_format( $transaction_data['amount'], 2, '.', '' ), // instead $order->get_total()
-			strtolower( $order->get_order_currency() ),
+			strtolower( $order->get_currency() ),
 			$status,
 			$this->secret
 		) );
@@ -593,7 +605,7 @@ class WC_Gateway_Mondido_HW extends WC_Gateway_Mondido_Abstract {
 			$fee->tax_class = '';
 			$fee->tax       = 0;
 			$fee->tax_data  = array();
-			$order->add_fee( $fee );
+			$this->add_order_fee($fee, $order);
 
 			// Calculate totals
 			$order->calculate_totals();
@@ -628,7 +640,7 @@ class WC_Gateway_Mondido_HW extends WC_Gateway_Mondido_Abstract {
 			$payment_ref,
 			$order->get_user_id() != '0' ? $order->get_user_id() : '',
 			number_format( $transaction_data['amount'], 2, '.', '' ), // instead $order->get_total()
-			strtolower( $order->get_order_currency() ),
+			strtolower( $order->get_currency() ),
 			$status,
 			$this->secret
 		) );
