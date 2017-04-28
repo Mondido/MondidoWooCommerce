@@ -178,6 +178,7 @@ class WC_Gateway_Mondido_HW extends WC_Gateway_Mondido_Abstract {
 					'invoice'    => __( 'Invoice/PartPayment', 'woocommerce-gateway-mondido' ),
 					'paypal'     => __( 'PayPal', 'woocommerce-gateway-mondido' ),
 					'mp'         => __( 'MasterPass', 'woocommerce-gateway-mondido' ),
+					'swish'      => __( 'Swish', 'woocommerce-gateway-mondido' ),
 				),
 				'select_buttons' => TRUE,
 			),
