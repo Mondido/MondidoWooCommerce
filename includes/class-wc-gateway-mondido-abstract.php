@@ -203,11 +203,6 @@ abstract class WC_Gateway_Mondido_Abstract extends WC_Payment_Gateway {
 				$product_id = wc_get_product_id_by_sku( $incoming_item['artno'] );
 			}
 
-			// Invalid Product Id
-            if ( empty( $product_id ) ) {
-                continue;
-            }
-
 			// Skip products which present in order
 			if ( $product_id && in_array( $product_id, $ids ) ) {
 				continue;
