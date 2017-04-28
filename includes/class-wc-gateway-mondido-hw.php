@@ -261,7 +261,8 @@ class WC_Gateway_Mondido_HW extends WC_Gateway_Mondido_Abstract {
 
 		// Add Products
 		foreach ( $order->get_items() as $order_item ) {
-			$product      = wc_get_product( $order_item['product_id'] );
+			$product_id = $this->is_wc3() ? $order_item->get_product_id() : $order_item['product_id'];
+			$product      = wc_get_product( $product_id );
 			$sku          = $product->get_sku();
 			$price        = $order->get_line_subtotal( $order_item, FALSE, FALSE );
 			$priceWithTax = $order->get_line_subtotal( $order_item, TRUE, FALSE );
@@ -270,22 +271,22 @@ class WC_Gateway_Mondido_HW extends WC_Gateway_Mondido_Abstract {
 
 			$items[] = array(
 				'artno'       => empty( $sku ) ? 'product_id' . $product->get_id() : $sku,
-				'description' => $order_item['name'],
+				'description' => $this->is_wc3() ? $order_item->get_name() : $order_item['name'],
 				'amount'      => number_format( $priceWithTax, 2, '.', '' ),
-				'qty'         => $order_item['qty'],
+				'qty'         => $this->is_wc3() ? $order_item->get_quantity() : $order_item['qty'],
 				'vat'         => number_format( $taxPercent, 2, '.', '' ),
 				'discount'    => 0
 			);
 		}
 
 		// Add Shipping
-		if ( (float) $order->order_shipping > 0 ) {
-			$taxPercent = ( $order->order_shipping_tax > 0 ) ? round( 100 / ( $order->order_shipping / $order->order_shipping_tax ) ) : 0;
+		if ( (float) $order->get_shipping_total() > 0 ) {
+			$taxPercent = ( $order->get_shipping_tax() > 0 ) ? round( 100 / ( $order->get_shipping_total() / $order->get_shipping_tax() ) ) : 0;
 
 			$items[] = array(
 				'artno'       => 'shipping',
 				'description' => $order->get_shipping_method(),
-				'amount'      => number_format( $order->order_shipping + $order->order_shipping_tax, 2, '.', '' ),
+				'amount'      => number_format( $order->get_shipping_total() + $order->get_shipping_tax(), 2, '.', '' ),
 				'qty'         => 1,
 				'vat'         => number_format( $taxPercent, 2, '.', '' ),
 				'discount'    => 0
@@ -306,12 +307,23 @@ class WC_Gateway_Mondido_HW extends WC_Gateway_Mondido_Abstract {
 
 		// Add Fees
 		foreach ( $order->get_fees() as $fee ) {
-			$taxPercent = ( $fee['line_tax'] > 0 ) ? round( 100 / ( $fee['line_total'] / $fee['line_tax'] ) ) : 0;
+			if ($this->is_wc3()) {
+				/** @var WC_Order_Item_Fee $fee */
+				$fee_name = $fee->get_name();
+				$fee_total = $fee->get_total();
+				$fee_tax = $fee->get_total_tax();
+			} else {
+				$fee_name = $fee['name'];
+				$fee_total = $fee['line_total'];
+				$fee_tax = $fee['line_tax'];
+			}
+
+			$taxPercent = ( $fee_tax > 0 ) ? round( 100 / ( $fee_total / $fee_tax ) ) : 0;
 
 			$items[] = array(
 				'artno'       => 'fee',
-				'description' => $fee['name'],
-				'amount'      => number_format( $fee['line_total'] + $fee['line_tax'], 2, '.', '' ),
+				'description' => $fee_name,
+				'amount'      => number_format( $fee['line_total'] + $fee_tax, 2, '.', '' ),
 				'qty'         => 1,
 				'vat'         => number_format( $taxPercent, 2, '.', '' ),
 				'discount'    => 0
@@ -322,17 +334,17 @@ class WC_Gateway_Mondido_HW extends WC_Gateway_Mondido_Abstract {
 		$metadata = array(
 			'products'  => $order->get_items(),
 			'customer'  => array(
-				'user_id'   => $order->customer_user,
-				'firstname' => $order->billing_first_name,
-				'lastname'  => $order->billing_last_name,
-				'address1'  => $order->billing_address_1,
-				'address2'  => $order->billing_address_2,
-				'postcode'  => $order->billing_postcode,
-				'phone'     => $order->billing_phone,
-				'city'      => $order->billing_city,
-				'country'   => $order->billing_country,
-				'state'     => $order->billing_state,
-				'email'     => $order->billing_email
+				'user_id'   => $order->get_user_id(),
+				'firstname' => $order->get_billing_first_name(),
+				'lastname'  => $order->get_billing_last_name(),
+				'address1'  => $order->get_billing_address_1(),
+				'address2'  => $order->get_billing_address_2(),
+				'postcode'  => $order->get_billing_postcode(),
+				'phone'     => $order->get_billing_phone(),
+				'city'      => $order->get_billing_city(),
+				'country'   => $order->get_billing_country(),
+				'state'     => $order->get_billing_state(),
+				'email'     => $order->get_billing_email()
 			),
 			'analytics' => array(),
 			'platform'  => array(
@@ -366,9 +378,9 @@ class WC_Gateway_Mondido_HW extends WC_Gateway_Mondido_Abstract {
 			'amount'       => number_format( $order->get_total(), 2, '.', '' ),
 			'vat_amount'   => number_format( $order->get_total_tax(), 2, '.', '' ),
 			'merchant_id'  => $this->merchant_id,
-			'currency'     => $order->get_order_currency(),
+			'currency'     => $order->get_currency(),
 			'customer_ref' => $order->get_user_id() != '0' ? $order->get_user_id() : '',
-			'payment_ref'  => $order->id,
+			'payment_ref'  => $order->get_id(),
 			'success_url'  => $this->get_return_url( $order ),
 			'error_url'    => $order->get_cancel_order_url(),
 			'metadata'     => $metadata,
@@ -423,12 +435,12 @@ class WC_Gateway_Mondido_HW extends WC_Gateway_Mondido_Abstract {
 
 		/** @var WC_Order $order */
 		$order = wc_get_order( $order_id );
-		if ( $order && $order->payment_method !== $this->id ) {
+		if ( $order && $order->get_payment_method() !== $this->id ) {
 			return;
 		}
 
 		// Check is Transaction already processed
-		$id = get_post_meta( $order->id, '_transaction_id', TRUE );
+		$id = get_post_meta( $order->get_id(), '_transaction_id', TRUE );
 		if ( ! empty( $id ) ) {
 			return;
 		}
@@ -458,7 +470,7 @@ class WC_Gateway_Mondido_HW extends WC_Gateway_Mondido_Abstract {
 			$payment_ref,
 			$order->get_user_id() != '0' ? $order->get_user_id() : '',
 			number_format( $transaction_data['amount'], 2, '.', '' ), // instead $order->get_total()
-			strtolower( $order->get_order_currency() ),
+			strtolower( $order->get_currency() ),
 			$status,
 			$this->secret
 		) );
@@ -469,9 +481,9 @@ class WC_Gateway_Mondido_HW extends WC_Gateway_Mondido_Abstract {
 		}
 
 		// Save Transaction
-		update_post_meta( $order->id, '_transaction_id', $transaction_id );
-		update_post_meta( $order->id, '_mondido_transaction_status', $status );
-		update_post_meta( $order->id, '_mondido_transaction_data', $transaction_data );
+		update_post_meta( $order->get_id(), '_transaction_id', $transaction_id );
+		update_post_meta( $order->get_id(), '_mondido_transaction_status', $status );
+		update_post_meta( $order->get_id(), '_mondido_transaction_data', $transaction_data );
 
 		switch ( $status ) {
 			case 'pending':
@@ -514,7 +526,7 @@ class WC_Gateway_Mondido_HW extends WC_Gateway_Mondido_Abstract {
 				'postcode'   => $details['zip'],
 				'country'    => $details['country_code']
 			);
-			update_post_meta( $order->id, '_mondido_invoice_address', $address );
+			update_post_meta( $order->get_id(), '_mondido_invoice_address', $address );
 
 			// Format address
 			$formatted = '';
@@ -573,11 +585,11 @@ class WC_Gateway_Mondido_HW extends WC_Gateway_Mondido_Abstract {
 				'total'         => $transaction_data['amount'],
 				'created_via'   => 'mondido',
 			) );
-			add_post_meta( $order->id, '_payment_method', $this->id );
-			update_post_meta( $order->id, '_transaction_id', $transaction_data['id'] );
-			update_post_meta( $order->id, '_mondido_transaction_status', $transaction_data['status'] );
-			update_post_meta( $order->id, '_mondido_transaction_data', $transaction_data );
-			update_post_meta( $order->id, '_mondido_subscription_id', $transaction_data['subscription']['id'] );
+			add_post_meta( $order->get_id(), '_payment_method', $this->id );
+			update_post_meta( $order->get_id(), '_transaction_id', $transaction_data['id'] );
+			update_post_meta( $order->get_id(), '_mondido_transaction_status', $transaction_data['status'] );
+			update_post_meta( $order->get_id(), '_mondido_transaction_data', $transaction_data );
+			update_post_meta( $order->get_id(), '_mondido_subscription_id', $transaction_data['subscription']['id'] );
 
 			// Add address
 			$order->set_address( $transaction_data['metadata']['customer'], 'billing' );
@@ -594,7 +606,7 @@ class WC_Gateway_Mondido_HW extends WC_Gateway_Mondido_Abstract {
 			$fee->tax_class = '';
 			$fee->tax       = 0;
 			$fee->tax_data  = array();
-			$order->add_fee( $fee );
+			$this->add_order_fee($fee, $order);
 
 			// Calculate totals
 			$order->calculate_totals();
@@ -608,8 +620,8 @@ class WC_Gateway_Mondido_HW extends WC_Gateway_Mondido_Abstract {
 			}
 
 			header( sprintf( '%s %s %s', 'HTTP/1.1', '200', 'OK' ), TRUE, '200' );
-			$logger->add( $this->id, "Recurring Order was placed by WebHook. Order ID: {$order->id}. Transaction Id: {$transaction_data['id']}" );
-			exit( "Recurring Order was placed by WebHook. Order ID: {$order->id}. Transaction Id: {$transaction_data['id']}" );
+			$logger->add( $this->id, "Recurring Order was placed by WebHook. Order ID: {$order->get_id()}. Transaction Id: {$transaction_data['id']}" );
+			exit( "Recurring Order was placed by WebHook. Order ID: {$order->get_id()}. Transaction Id: {$transaction_data['id']}" );
 		}
 
 		$order = wc_get_order( $transaction_data['payment_ref'] );
@@ -629,7 +641,7 @@ class WC_Gateway_Mondido_HW extends WC_Gateway_Mondido_Abstract {
 			$payment_ref,
 			$order->get_user_id() != '0' ? $order->get_user_id() : '',
 			number_format( $transaction_data['amount'], 2, '.', '' ), // instead $order->get_total()
-			strtolower( $order->get_order_currency() ),
+			strtolower( $order->get_currency() ),
 			$status,
 			$this->secret
 		) );
@@ -644,7 +656,7 @@ class WC_Gateway_Mondido_HW extends WC_Gateway_Mondido_Abstract {
 		$times = 0;
 
 		// Lookup state
-		$state = get_post_meta( $order->id, '_mondido_transaction_status', TRUE );
+		$state = get_post_meta( $order->get_id(), '_mondido_transaction_status', TRUE );
 		while ( empty( $state ) ) {
 			$times ++;
 			if ( $times > 6 ) {
@@ -653,21 +665,21 @@ class WC_Gateway_Mondido_HW extends WC_Gateway_Mondido_Abstract {
 			sleep( 10 );
 
 			// Lookup state
-			$state = get_post_meta( $order->id, '_mondido_transaction_status', TRUE );
+			$state = get_post_meta( $order->get_id(), '_mondido_transaction_status', TRUE );
 		}
 
 		// Check is Order was confirmed
 		if ( ! empty( $state ) ) {
 			header( sprintf( '%s %s %s', 'HTTP/1.1', '200', 'OK' ), TRUE, '200' );
-			$logger->add( $this->id, "Order {$order->id} already confirmed. Transaction ID: {$transaction_id}" );
-			exit( "Order {$order->id} already confirmed. Transaction ID: {$transaction_id}" );
+			$logger->add( $this->id, "Order {$order->get_id()} already confirmed. Transaction ID: {$transaction_id}" );
+			exit( "Order {$order->get_id()} already confirmed. Transaction ID: {$transaction_id}" );
 		}
 
 		// Confirm order
 		// Save Transaction
-		update_post_meta( $order->id, '_transaction_id', $transaction_id );
-		update_post_meta( $order->id, '_mondido_transaction_status', $status );
-		update_post_meta( $order->id, '_mondido_transaction_data', $transaction_data );
+		update_post_meta( $order->get_id(), '_transaction_id', $transaction_id );
+		update_post_meta( $order->get_id(), '_mondido_transaction_status', $status );
+		update_post_meta( $order->get_id(), '_mondido_transaction_data', $transaction_data );
 
 		switch ( $status ) {
 			case 'pending':
@@ -710,7 +722,7 @@ class WC_Gateway_Mondido_HW extends WC_Gateway_Mondido_Abstract {
 				'postcode'   => $details['zip'],
 				'country'    => $details['country_code']
 			);
-			update_post_meta( $order->id, '_mondido_invoice_address', $address );
+			update_post_meta( $order->get_id(), '_mondido_invoice_address', $address );
 
 			// Format address
 			$formatted = '';
@@ -726,8 +738,8 @@ class WC_Gateway_Mondido_HW extends WC_Gateway_Mondido_Abstract {
 		}
 
 		header( sprintf( '%s %s %s', 'HTTP/1.1', '200', 'OK' ), TRUE, '200' );
-		$logger->add( $this->id, "Order was placed by WebHook. Order ID: {$order->id}. Transaction status: {$status}" );
-		exit( "Order was placed by WebHook. Order ID: {$order->id}. Transaction status: {$status}" );
+		$logger->add( $this->id, "Order was placed by WebHook. Order ID: {$order->get_id()}. Transaction status: {$status}" );
+		exit( "Order was placed by WebHook. Order ID: {$order->get_id()}. Transaction status: {$status}" );
 	}
 
 	/**
