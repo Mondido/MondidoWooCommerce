@@ -304,4 +304,81 @@ abstract class WC_Gateway_Mondido_Abstract extends WC_Payment_Gateway {
 
 		return TRUE;
 	}
+
+	/**
+	 * @param WC_Order $order
+	 * @param array $transaction_data
+	 * @return void
+	 */
+	public function handle_transaction( $order, $transaction_data ) {
+		$transaction_id = $transaction_data['id'];
+		$status = $transaction_data['status'];
+
+		// Check transaction was processed
+		$data = get_post_meta( $order->get_id(), '_mondido_transaction_data', TRUE );
+		if ( ! empty($data) ) {
+			return;
+		}
+
+		// Save Transaction
+		update_post_meta( $order->get_id(), '_transaction_id', $transaction_id );
+		update_post_meta( $order->get_id(), '_mondido_transaction_status', $status );
+		update_post_meta( $order->get_id(), '_mondido_transaction_data', $transaction_data );
+
+		switch ( $status ) {
+			case 'pending':
+				$this->updateOrderWithIncomingProducts( $order, $transaction_data );
+				$order->update_status( 'on-hold', sprintf( __( 'Payment pending. Transaction Id: %s', 'woocommerce-gateway-mondido' ), $transaction_id ) );
+				WC()->cart->empty_cart();
+				break;
+			case 'approved':
+				$this->updateOrderWithIncomingProducts( $order, $transaction_data );
+				$order->add_order_note( sprintf( __( 'Payment completed. Transaction Id: %s', 'woocommerce-gateway-mondido' ), $transaction_id ) );
+				$order->payment_complete( $transaction_id );
+				WC()->cart->empty_cart();
+				break;
+			case 'authorized':
+				$this->updateOrderWithIncomingProducts( $order, $transaction_data );
+				$order->update_status( 'on-hold', sprintf( __( 'Payment authorized. Transaction Id: %s', 'woocommerce-gateway-mondido' ), $transaction_id ) );
+				WC()->cart->empty_cart();
+				break;
+			case 'declined':
+				$order->update_status( 'failed', __( 'Payment declined.', 'woocommerce-gateway-mondido' ) );
+				break;
+			case 'failed':
+				$order->update_status( 'failed', __( 'Payment failed.', 'woocommerce-gateway-mondido' ) );
+				break;
+		}
+
+		// Save invoice address
+		if ( $transaction_data['transaction_type'] === 'invoice' ) {
+			$details = $transaction_data['payment_details'];
+			$address = array(
+				'first_name' => $details['first_name'],
+				'last_name'  => $details['last_name'],
+				'company'    => '',
+				'email'      => $details['email'],
+				'phone'      => $details['phone'],
+				'address_1'  => $details['address_1'],
+				'address_2'  => $details['address_2'],
+				'city'       => $details['city'],
+				'state'      => '',
+				'postcode'   => $details['zip'],
+				'country'    => $details['country_code']
+			);
+			update_post_meta( $order->get_id(), '_mondido_invoice_address', $address );
+
+			// Format address
+			$formatted = '';
+			$fields    = WC()->countries->get_default_address_fields();
+			foreach ( $address as $key => $value ) {
+				if ( ! isset( $fields[ $key ] ) || empty( $value ) ) {
+					continue;
+				}
+				$formatted .= $fields[ $key ]['label'] . ': ' . $value . "\n";
+			}
+
+			$order->add_order_note( sprintf( __( 'Invoice Address: %s', 'woocommerce-gateway-mondido' ), "\n" . $formatted ) );
+		}
+	}
 }
