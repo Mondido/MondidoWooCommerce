@@ -91,6 +91,10 @@ class WC_Mondido_Payments {
 		// Includes
 		include_once( dirname( __FILE__ ) . '/includes/class-wc-gateway-mondido-abstract.php' );
 		include_once( dirname( __FILE__ ) . '/includes/class-wc-gateway-mondido-hw.php' );
+		include_once( dirname( __FILE__ ) . '/includes/class-wc-gateway-mondido-invoice.php' );
+		include_once( dirname( __FILE__ ) . '/includes/class-wc-gateway-mondido-bank.php' );
+		include_once( dirname( __FILE__ ) . '/includes/class-wc-gateway-mondido-swish.php' );
+		include_once( dirname( __FILE__ ) . '/includes/class-wc-gateway-mondido-paypal.php' );
 	}
 
 	/**
@@ -98,6 +102,10 @@ class WC_Mondido_Payments {
 	 */
 	public function register_gateway( $methods ) {
 		$methods[] = 'WC_Gateway_Mondido_HW';
+		$methods[] = 'WC_Gateway_Mondido_Invoice';
+		$methods[] = 'WC_Gateway_Mondido_Bank';
+		$methods[] = 'WC_Gateway_Mondido_Swish';
+		$methods[] = 'WC_Gateway_Mondido_PayPal';
 
 		return $methods;
 	}
@@ -116,7 +124,7 @@ class WC_Mondido_Payments {
 	public static function add_meta_boxes() {
 		global $post_id;
 		$order = wc_get_order( $post_id );
-		if ( $order && in_array( $order->get_payment_method(), array( 'mondido_hw' ) ) ) {
+		if ( $order && strpos( $order->get_payment_method(), 'mondido' ) !== false ) {
 			$transaction = get_post_meta( $order->get_id(), '_mondido_transaction_data', TRUE );
 			if ( ! empty( $transaction ) ) {
 				add_meta_box(
