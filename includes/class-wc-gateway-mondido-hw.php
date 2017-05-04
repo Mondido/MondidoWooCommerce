@@ -455,7 +455,7 @@ class WC_Gateway_Mondido_HW extends WC_Gateway_Mondido_Abstract {
 			if ( $times > 6 ) {
 				break;
 			}
-			sleep( 5 );
+			sleep( 10 );
 
 			$value = get_post_meta( $order->get_id(), '_mondido_transaction_data', TRUE );
 		} while ( empty( $value ) );
