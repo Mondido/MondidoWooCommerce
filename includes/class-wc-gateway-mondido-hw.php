@@ -445,106 +445,62 @@ class WC_Gateway_Mondido_HW extends WC_Gateway_Mondido_Abstract {
 			return;
 		}
 
-		$transaction_id = wc_clean( $_GET['transaction_id'] );
-		$payment_ref    = wc_clean( $_GET['payment_ref'] );
-		$status         = wc_clean( $_GET['status'] );
-
-		// Verify Payment Reference
-		if ( $payment_ref !== $order_id ) {
-			wc_add_notice( __( 'Payment Reference verification failed', 'woocommerce-gateway-mondido' ), 'error' );
-
+		// Use transient to prevent multiple requests
+		if ( get_transient( 'mondido_transaction_' . $id ) !== false ) {
+			$logger   = new WC_Logger();
+			$logger->add( $this->id, "Payment confirm rejected. Transaction ID: {$id}" );
 			return;
 		}
+		set_transient( 'mondido_transaction_' . $id, true, MINUTE_IN_SECONDS );
 
-		// Lookup transaction
-		$transaction_data = $this->lookupTransaction( $transaction_id );
-		if ( ! $transaction_data ) {
-			wc_add_notice( __( 'Failed to verify transaction', 'woocommerce-gateway-mondido' ), 'error' );
+		// Lookup transaction data
+		// Confirm order if still unconfirmed
+		$value = get_post_meta( $order->get_id(), '_mondido_transaction_data', TRUE );
+		if ( empty( $value ) ) {
+			$transaction_id = wc_clean( $_GET['transaction_id'] );
+			$payment_ref    = wc_clean( $_GET['payment_ref'] );
+			$status         = wc_clean( $_GET['status'] );
 
-			return;
-		}
+			// Verify Payment Reference
+			if ( $payment_ref !== $order_id ) {
+				wc_add_notice( __( 'Payment Reference verification failed', 'woocommerce-gateway-mondido' ), 'error' );
 
-		// Verify hash
-		$hash = md5( sprintf( '%s%s%s%s%s%s%s',
-			$this->merchant_id,
-			$payment_ref,
-			$order->get_user_id() != '0' ? $order->get_user_id() : '',
-			number_format( $transaction_data['amount'], 2, '.', '' ), // instead $order->get_total()
-			strtolower( $order->get_currency() ),
-			$status,
-			$this->secret
-		) );
-		if ( $hash !== wc_clean( $_GET['hash'] ) ) {
-			wc_add_notice( __( 'Hash verification failed', 'woocommerce-gateway-mondido' ), 'error' );
-
-			return;
-		}
-
-		// Save Transaction
-		update_post_meta( $order->get_id(), '_transaction_id', $transaction_id );
-		update_post_meta( $order->get_id(), '_mondido_transaction_status', $status );
-		update_post_meta( $order->get_id(), '_mondido_transaction_data', $transaction_data );
-
-		switch ( $status ) {
-			case 'pending':
-				$this->updateOrderWithIncomingProducts( $order, $transaction_data );
-				$order->update_status( 'on-hold', sprintf( __( 'Payment pending. Transaction Id: %s', 'woocommerce-gateway-mondido' ), $transaction_id ) );
-				WC()->cart->empty_cart();
-				break;
-			case 'approved':
-				$this->updateOrderWithIncomingProducts( $order, $transaction_data );
-				$order->add_order_note( sprintf( __( 'Payment completed. Transaction Id: %s', 'woocommerce-gateway-mondido' ), $transaction_id ) );
-				$order->payment_complete( $transaction_id );
-				WC()->cart->empty_cart();
-				break;
-			case 'authorized':
-				$this->updateOrderWithIncomingProducts( $order, $transaction_data );
-				$order->update_status( 'on-hold', sprintf( __( 'Payment authorized. Transaction Id: %s', 'woocommerce-gateway-mondido' ), $transaction_id ) );
-				WC()->cart->empty_cart();
-				break;
-			case 'declined':
-				$order->update_status( 'failed', __( 'Payment declined.', 'woocommerce-gateway-mondido' ) );
-				break;
-			case 'failed':
-				$order->update_status( 'failed', __( 'Payment failed.', 'woocommerce-gateway-mondido' ) );
-				break;
-		}
-
-		// Save invoice address
-		if ( $transaction_data['transaction_type'] === 'invoice' ) {
-			$details = $transaction_data['payment_details'];
-			$address = array(
-				'first_name' => $details['first_name'],
-				'last_name'  => $details['last_name'],
-				'company'    => '',
-				'email'      => $details['email'],
-				'phone'      => $details['phone'],
-				'address_1'  => $details['address_1'],
-				'address_2'  => $details['address_2'],
-				'city'       => $details['city'],
-				'state'      => '',
-				'postcode'   => $details['zip'],
-				'country'    => $details['country_code']
-			);
-			update_post_meta( $order->get_id(), '_mondido_invoice_address', $address );
-
-			// Format address
-			$formatted = '';
-			$fields    = WC()->countries->get_default_address_fields();
-			foreach ( $address as $key => $value ) {
-				if ( ! isset( $fields[ $key ] ) || empty( $value ) ) {
-					continue;
-				}
-				$formatted .= $fields[ $key ]['label'] . ': ' . $value . "\n";
+				return;
 			}
 
-			$order->add_order_note( sprintf( __( 'Invoice Address: %s', 'woocommerce-gateway-mondido' ), "\n" . $formatted ) );
+			// Lookup transaction
+			$transaction_data = $this->lookupTransaction( $transaction_id );
+			if ( ! $transaction_data ) {
+				wc_add_notice( __( 'Failed to verify transaction', 'woocommerce-gateway-mondido' ), 'error' );
+
+				return;
+			}
+
+			// Verify hash
+			$hash = md5( sprintf( '%s%s%s%s%s%s%s',
+				$this->merchant_id,
+				$payment_ref,
+				$order->get_user_id() != '0' ? $order->get_user_id() : '',
+				number_format( $transaction_data['amount'], 2, '.', '' ), // instead $order->get_total()
+				strtolower( $order->get_currency() ),
+				$status,
+				$this->secret
+			) );
+			if ( $hash !== wc_clean( $_GET['hash'] ) ) {
+				wc_add_notice( __( 'Hash verification failed', 'woocommerce-gateway-mondido' ), 'error' );
+
+				return;
+			}
+
+			// Confirm order
+			$this->handle_transaction( $order, $transaction_data );
 		}
 	}
 
 	/**
 	 * Notification Callback
 	 * ?wc-api=WC_Gateway_Mondido_HW
+	 * @return void
 	 */
 	public function notification_callback() {
 		@ob_clean();
@@ -563,6 +519,14 @@ class WC_Gateway_Mondido_HW extends WC_Gateway_Mondido_Abstract {
 			$logger->add( $this->id, 'Invalid transaction ID' );
 			exit( 'Invalid transaction ID' );
 		}
+
+		// Use transient to prevent multiple requests
+		if ( get_transient( 'mondido_transaction_' . $data['id'] ) !== false ) {
+			header( sprintf( '%s %s %s', 'HTTP/1.1', '200', 'OK' ), TRUE, '200' );
+			$logger->add( $this->id, "WebHook action rejected. Transaction ID: {$data['id']}" );
+			exit( "WebHook action rejected. Transaction ID: {$data['id']}" );
+		}
+		set_transient( 'mondido_transaction_' . $data['id'], true, MINUTE_IN_SECONDS );
 
 		// Lookup transaction
 		$transaction_data = $this->lookupTransaction( $data['id'] );
@@ -651,95 +615,36 @@ class WC_Gateway_Mondido_HW extends WC_Gateway_Mondido_Abstract {
 			exit( 'Hash verification failed' );
 		}
 
-		// Wait for order confirmation by customer
+		// Wait for order confirmation from Customer side
 		set_time_limit( 0 );
 		$times = 0;
-
-		// Lookup state
-		$state = get_post_meta( $order->get_id(), '_mondido_transaction_status', TRUE );
-		while ( empty( $state ) ) {
+		do {
 			$times ++;
 			if ( $times > 6 ) {
 				break;
 			}
 			sleep( 10 );
 
-			// Lookup state
-			$state = get_post_meta( $order->get_id(), '_mondido_transaction_status', TRUE );
-		}
+			clean_post_cache( $order->get_id() );
+			$value = get_post_meta( $order->get_id(), '_mondido_transaction_data', TRUE );
+		} while ( empty( $value ) );
 
 		// Check is Order was confirmed
-		if ( ! empty( $state ) ) {
+		if ( ! empty( $value ) ) {
 			header( sprintf( '%s %s %s', 'HTTP/1.1', '200', 'OK' ), TRUE, '200' );
 			$logger->add( $this->id, "Order {$order->get_id()} already confirmed. Transaction ID: {$transaction_id}" );
 			exit( "Order {$order->get_id()} already confirmed. Transaction ID: {$transaction_id}" );
 		}
 
+		// Reload order
+		$order = wc_get_order( $order->get_id() );
+
 		// Confirm order
-		// Save Transaction
-		update_post_meta( $order->get_id(), '_transaction_id', $transaction_id );
-		update_post_meta( $order->get_id(), '_mondido_transaction_status', $status );
-		update_post_meta( $order->get_id(), '_mondido_transaction_data', $transaction_data );
-
-		switch ( $status ) {
-			case 'pending':
-				$this->updateOrderWithIncomingProducts( $order, $transaction_data );
-				$order->update_status( 'on-hold', sprintf( __( 'Payment pending. Transaction Id: %s', 'woocommerce-gateway-mondido' ), $transaction_id ) );
-				WC()->cart->empty_cart();
-				break;
-			case 'approved':
-				$this->updateOrderWithIncomingProducts( $order, $transaction_data );
-				$order->add_order_note( sprintf( __( 'Payment completed. Transaction Id: %s', 'woocommerce-gateway-mondido' ), $transaction_id ) );
-				$order->payment_complete( $transaction_id );
-				WC()->cart->empty_cart();
-				break;
-			case 'authorized':
-				$this->updateOrderWithIncomingProducts( $order, $transaction_data );
-				$order->update_status( 'on-hold', sprintf( __( 'Payment authorized. Transaction Id: %s', 'woocommerce-gateway-mondido' ), $transaction_id ) );
-				WC()->cart->empty_cart();
-				break;
-			case 'declined':
-				$order->update_status( 'failed', __( 'Payment declined.', 'woocommerce-gateway-mondido' ) );
-				break;
-			case 'failed':
-				$order->update_status( 'failed', __( 'Payment failed.', 'woocommerce-gateway-mondido' ) );
-				break;
-		}
-
-		// Save invoice address
-		if ( $transaction_data['transaction_type'] === 'invoice' ) {
-			$details = $transaction_data['payment_details'];
-			$address = array(
-				'first_name' => $details['first_name'],
-				'last_name'  => $details['last_name'],
-				'company'    => '',
-				'email'      => $details['email'],
-				'phone'      => $details['phone'],
-				'address_1'  => $details['address_1'],
-				'address_2'  => $details['address_2'],
-				'city'       => $details['city'],
-				'state'      => '',
-				'postcode'   => $details['zip'],
-				'country'    => $details['country_code']
-			);
-			update_post_meta( $order->get_id(), '_mondido_invoice_address', $address );
-
-			// Format address
-			$formatted = '';
-			$fields    = WC()->countries->get_default_address_fields();
-			foreach ( $address as $key => $value ) {
-				if ( ! isset( $fields[ $key ] ) || empty( $value ) ) {
-					continue;
-				}
-				$formatted .= $fields[ $key ]['label'] . ': ' . $value . "\n";
-			}
-
-			$order->add_order_note( sprintf( __( 'Invoice Address: %s', 'woocommerce-gateway-mondido' ), "\n" . $formatted ) );
-		}
+		$this->handle_transaction( $order, $transaction_data );
 
 		header( sprintf( '%s %s %s', 'HTTP/1.1', '200', 'OK' ), TRUE, '200' );
-		$logger->add( $this->id, "Order was placed by WebHook. Order ID: {$order->get_id()}. Transaction status: {$status}" );
-		exit( "Order was placed by WebHook. Order ID: {$order->get_id()}. Transaction status: {$status}" );
+		$logger->add( $this->id, "Order was placed by WebHook. Order ID: {$order->get_id()}. Transaction ID: {$transaction_id}. Transaction status: {$status}" );
+		exit( "Order was placed by WebHook. Order ID: {$order->get_id()}. Transaction ID: {$transaction_id}. Transaction status: {$status}" );
 	}
 
 	/**

@@ -221,7 +221,7 @@ class WC_Order_Compatibility_Mondido {
 	 */
 	public static function order_class( $classname, $post_type, $order_id, $the_order ) {
 		$payment_method = get_post_meta( $order_id, '_payment_method', TRUE );
-		if ( empty( $payment_method ) || $payment_method !== 'mondido_hw' ) {
+		if ( empty( $payment_method ) || strpos($payment_method, 'mondido') === false ) {
 			return $classname;
 		}
 
