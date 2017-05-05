@@ -1,5 +1,8 @@
 *** WooCommerce Mondido Payments Gateway Changelog ***
 
+2017-05-05 - version 4.0.1
+* Code Improvements
+
 2017-04-07 - version 4.0.0
 * Code Improvements
 
