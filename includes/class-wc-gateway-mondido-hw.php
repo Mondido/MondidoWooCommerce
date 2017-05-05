@@ -445,22 +445,17 @@ class WC_Gateway_Mondido_HW extends WC_Gateway_Mondido_Abstract {
 			return;
 		}
 
-		// Wait for order confirmation by WebHook
-		set_time_limit( 0 );
-		$times = 0;
+		// Use transient to prevent multiple requests
+		if ( get_transient( 'mondido_transaction_' . $id ) !== false ) {
+			$logger   = new WC_Logger();
+			$logger->add( $this->id, "Payment confirm rejected. Transaction ID: {$id}" );
+			return;
+		}
+		set_transient( 'mondido_transaction_' . $id, true, MINUTE_IN_SECONDS );
 
 		// Lookup transaction data
-		do {
-			$times ++;
-			if ( $times > 6 ) {
-				break;
-			}
-			sleep( 10 );
-
-			$value = get_post_meta( $order->get_id(), '_mondido_transaction_data', TRUE );
-		} while ( empty( $value ) );
-
 		// Confirm order if still unconfirmed
+		$value = get_post_meta( $order->get_id(), '_mondido_transaction_data', TRUE );
 		if ( empty( $value ) ) {
 			$transaction_id = wc_clean( $_GET['transaction_id'] );
 			$payment_ref    = wc_clean( $_GET['payment_ref'] );
@@ -620,8 +615,21 @@ class WC_Gateway_Mondido_HW extends WC_Gateway_Mondido_Abstract {
 			exit( 'Hash verification failed' );
 		}
 
+		// Wait for order confirmation from Customer side
+		set_time_limit( 0 );
+		$times = 0;
+		do {
+			$times ++;
+			if ( $times > 6 ) {
+				break;
+			}
+			sleep( 10 );
+
+			clean_post_cache( $order->get_id() );
+			$value = get_post_meta( $order->get_id(), '_mondido_transaction_data', TRUE );
+		} while ( empty( $value ) );
+
 		// Check is Order was confirmed
-		$value = get_post_meta( $order->get_id(), '_mondido_transaction_data', TRUE );
 		if ( ! empty( $value ) ) {
 			header( sprintf( '%s %s %s', 'HTTP/1.1', '200', 'OK' ), TRUE, '200' );
 			$logger->add( $this->id, "Order {$order->get_id()} already confirmed. Transaction ID: {$transaction_id}" );
