@@ -9,8 +9,6 @@ class WC_Gateway_Mondido_PayPal extends WC_Gateway_Mondido_HW {
 	 * Init
 	 */
 	public function __construct() {
-		parent::__construct();
-
 		$this->id                 = 'mondido_paypal';
 		$this->has_fields         = TRUE;
 		$this->method_title       = __( 'Mondido PayPal', 'woocommerce-gateway-mondido' );
