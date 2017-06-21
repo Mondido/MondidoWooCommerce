@@ -366,7 +366,7 @@ class WC_Gateway_Mondido_HW extends WC_Gateway_Mondido_Abstract {
 
 		// Prepare WebHook
 		$webhook = array(
-			'url'         => WC()->api_request_url( __CLASS__ ),
+			'url'         => add_query_arg( 'wp_hook', '1', WC()->api_request_url( __CLASS__ ) ),
 			'trigger'     => 'payment',
 			'http_method' => 'post',
 			'data_format' => 'json',
@@ -439,62 +439,51 @@ class WC_Gateway_Mondido_HW extends WC_Gateway_Mondido_Abstract {
 			return;
 		}
 
-		// Check is Transaction already processed
-		$id = get_post_meta( $order->get_id(), '_transaction_id', TRUE );
-		if ( ! empty( $id ) ) {
-			return;
-		}
+		$transaction_id = wc_clean( $_GET['transaction_id'] );
+		$payment_ref    = wc_clean( $_GET['payment_ref'] );
+		$status         = wc_clean( $_GET['status'] );
 
 		// Use transient to prevent multiple requests
-		if ( get_transient( 'mondido_transaction_' . $id ) !== false ) {
+		if ( get_transient( 'mondido_transaction_' . $transaction_id . $status ) !== false ) {
 			$logger   = new WC_Logger();
-			$logger->add( $this->id, "Payment confirm rejected. Transaction ID: {$id}" );
+			$logger->add( $this->id, "Payment confirm rejected. Transaction ID: {$transaction_id}. Status: {$status}" );
 			return;
 		}
-		set_transient( 'mondido_transaction_' . $id, true, MINUTE_IN_SECONDS );
+		set_transient( 'mondido_transaction_' . $transaction_id . $status, true, MINUTE_IN_SECONDS );
 
-		// Lookup transaction data
-		// Confirm order if still unconfirmed
-		$value = get_post_meta( $order->get_id(), '_mondido_transaction_data', TRUE );
-		if ( empty( $value ) ) {
-			$transaction_id = wc_clean( $_GET['transaction_id'] );
-			$payment_ref    = wc_clean( $_GET['payment_ref'] );
-			$status         = wc_clean( $_GET['status'] );
+		// Verify Payment Reference
+		if ( $payment_ref !== $order_id ) {
+			wc_add_notice( __( 'Payment Reference verification failed', 'woocommerce-gateway-mondido' ), 'error' );
 
-			// Verify Payment Reference
-			if ( $payment_ref !== $order_id ) {
-				wc_add_notice( __( 'Payment Reference verification failed', 'woocommerce-gateway-mondido' ), 'error' );
-
-				return;
-			}
-
-			// Lookup transaction
-			$transaction_data = $this->lookupTransaction( $transaction_id );
-			if ( ! $transaction_data ) {
-				wc_add_notice( __( 'Failed to verify transaction', 'woocommerce-gateway-mondido' ), 'error' );
-
-				return;
-			}
-
-			// Verify hash
-			$hash = md5( sprintf( '%s%s%s%s%s%s%s',
-				$this->merchant_id,
-				$payment_ref,
-				$order->get_user_id() != '0' ? $order->get_user_id() : '',
-				number_format( $transaction_data['amount'], 2, '.', '' ), // instead $order->get_total()
-				strtolower( $order->get_currency() ),
-				$status,
-				$this->secret
-			) );
-			if ( $hash !== wc_clean( $_GET['hash'] ) ) {
-				wc_add_notice( __( 'Hash verification failed', 'woocommerce-gateway-mondido' ), 'error' );
-
-				return;
-			}
-
-			// Confirm order
-			$this->handle_transaction( $order, $transaction_data );
+			return;
 		}
+
+		// Lookup transaction
+		$transaction_data = $this->lookupTransaction( $transaction_id );
+		if ( ! $transaction_data ) {
+			wc_add_notice( __( 'Failed to verify transaction', 'woocommerce-gateway-mondido' ), 'error' );
+
+			return;
+		}
+
+		// Verify hash
+		$hash = md5( sprintf( '%s%s%s%s%s%s%s',
+			$this->merchant_id,
+			$payment_ref,
+			$order->get_user_id() != '0' ? $order->get_user_id() : '',
+			number_format( $transaction_data['amount'], 2, '.', '' ), // instead $order->get_total()
+			strtolower( $order->get_currency() ),
+			$status,
+			$this->secret
+		) );
+		if ( $hash !== wc_clean( $_GET['hash'] ) ) {
+			wc_add_notice( __( 'Hash verification failed', 'woocommerce-gateway-mondido' ), 'error' );
+
+			return;
+		}
+
+		// Confirm order
+		$this->handle_transaction( $order, $transaction_data );
 	}
 
 	/**
@@ -521,12 +510,12 @@ class WC_Gateway_Mondido_HW extends WC_Gateway_Mondido_Abstract {
 		}
 
 		// Use transient to prevent multiple requests
-		if ( get_transient( 'mondido_transaction_' . $data['id'] ) !== false ) {
+		if ( get_transient( 'mondido_transaction_' . $data['id'] . $data['status'] ) !== false ) {
 			header( sprintf( '%s %s %s', 'HTTP/1.1', '200', 'OK' ), TRUE, '200' );
-			$logger->add( $this->id, "WebHook action rejected. Transaction ID: {$data['id']}" );
-			exit( "WebHook action rejected. Transaction ID: {$data['id']}" );
+			$logger->add( $this->id, "WebHook action rejected. Transaction ID: {$data['id']}. Status: {$data['status']}" );
+			exit( "WebHook action rejected. Transaction ID: {$data['id']}. Status: {$data['status']}" );
 		}
-		set_transient( 'mondido_transaction_' . $data['id'], true, MINUTE_IN_SECONDS );
+		set_transient( 'mondido_transaction_' . $data['id'] . $data['status'], true, MINUTE_IN_SECONDS );
 
 		// Lookup transaction
 		$transaction_data = $this->lookupTransaction( $data['id'] );
@@ -630,10 +619,10 @@ class WC_Gateway_Mondido_HW extends WC_Gateway_Mondido_Abstract {
 		} while ( empty( $value ) );
 
 		// Check is Order was confirmed
-		if ( ! empty( $value ) ) {
+		if ( ! empty( $value ) && $value['status'] === $status ) {
 			header( sprintf( '%s %s %s', 'HTTP/1.1', '200', 'OK' ), TRUE, '200' );
-			$logger->add( $this->id, "Order {$order->get_id()} already confirmed. Transaction ID: {$transaction_id}" );
-			exit( "Order {$order->get_id()} already confirmed. Transaction ID: {$transaction_id}" );
+			$logger->add( $this->id, "Order {$order->get_id()} already confirmed. Transaction ID: {$transaction_id}. Status: {$status}" );
+			exit( "Order {$order->get_id()} already confirmed. Transaction ID: {$transaction_id}. Status: {$status}" );
 		}
 
 		// Reload order

@@ -315,8 +315,8 @@ abstract class WC_Gateway_Mondido_Abstract extends WC_Payment_Gateway {
 		$status = $transaction_data['status'];
 
 		// Check transaction was processed
-		$data = get_post_meta( $order->get_id(), '_mondido_transaction_data', TRUE );
-		if ( ! empty($data) ) {
+		$current_status = get_post_meta( $order->get_id(), '_mondido_transaction_status', true );
+		if ($current_status === $status) {
 			return;
 		}
 
