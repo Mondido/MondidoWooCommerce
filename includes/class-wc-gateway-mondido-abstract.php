@@ -126,7 +126,8 @@ abstract class WC_Gateway_Mondido_Abstract extends WC_Payment_Gateway {
 
 	/**
 	 * Get Subscription Plans
-	 * @return array|bool|mixed|object
+	 * @return array|mixed|object
+	 * @throws \Exception
 	 */
 	public function getSubscriptionPlans() {
 		$result = wp_remote_get( 'https://api.mondido.com/v1/plans', array(
@@ -136,15 +137,11 @@ abstract class WC_Gateway_Mondido_Abstract extends WC_Payment_Gateway {
 		) );
 
 		if ( is_a( $result, 'WP_Error' ) ) {
-			wc_add_notice( implode( $result->errors['http_request_failed'] ), 'error' );
-
-			return FALSE;
+			throw new Exception( implode( $result->errors['http_request_failed'] ) );
 		}
 
 		if ( $result['response']['code'] != 200 ) {
-			wc_add_notice( $result['body'], 'error' );
-
-			return FALSE;
+			throw new Exception( $result['body'] );
 		}
 
 		return json_decode( $result['body'], TRUE );
