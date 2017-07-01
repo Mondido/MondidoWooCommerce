@@ -347,35 +347,39 @@ abstract class WC_Gateway_Mondido_Abstract extends WC_Payment_Gateway {
 				break;
 		}
 
-		// Save invoice address
-		if ( $transaction_data['transaction_type'] === 'invoice' ) {
-			$details = $transaction_data['payment_details'];
-			$address = array(
-				'first_name' => $details['first_name'],
-				'last_name'  => $details['last_name'],
-				'company'    => '',
-				'email'      => $details['email'],
-				'phone'      => $details['phone'],
-				'address_1'  => $details['address_1'],
-				'address_2'  => $details['address_2'],
-				'city'       => $details['city'],
-				'state'      => '',
-				'postcode'   => $details['zip'],
-				'country'    => $details['country_code']
-			);
-			update_post_meta( $order->get_id(), '_mondido_invoice_address', $address );
+		switch ( $transaction_data['transaction_type'] ) {
+			case 'invoice':
+				// Save invoice address
+				$details = $transaction_data['payment_details'];
+				$address = array(
+					'first_name' => $details['first_name'],
+					'last_name'  => $details['last_name'],
+					'company'    => '',
+					'email'      => $details['email'],
+					'phone'      => $details['phone'],
+					'address_1'  => $details['address_1'],
+					'address_2'  => $details['address_2'],
+					'city'       => $details['city'],
+					'state'      => '',
+					'postcode'   => $details['zip'],
+					'country'    => $details['country_code']
+				);
+				update_post_meta( $order->get_id(), '_mondido_invoice_address', $address );
 
-			// Format address
-			$formatted = '';
-			$fields    = WC()->countries->get_default_address_fields();
-			foreach ( $address as $key => $value ) {
-				if ( ! isset( $fields[ $key ] ) || empty( $value ) ) {
-					continue;
+				// Format address
+				$formatted = '';
+				$fields    = WC()->countries->get_default_address_fields();
+				foreach ( $address as $key => $value ) {
+					if ( ! isset( $fields[ $key ] ) || empty( $value ) ) {
+						continue;
+					}
+					$formatted .= $fields[ $key ]['label'] . ': ' . $value . "\n";
 				}
-				$formatted .= $fields[ $key ]['label'] . ': ' . $value . "\n";
-			}
 
-			$order->add_order_note( sprintf( __( 'Invoice Address: %s', 'woocommerce-gateway-mondido' ), "\n" . $formatted ) );
+				$order->add_order_note( sprintf( __( 'Invoice Address: %s', 'woocommerce-gateway-mondido' ), "\n" . $formatted ) );
+				break;
+			default:
+				//
 		}
 	}
 }

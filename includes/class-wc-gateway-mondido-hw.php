@@ -525,56 +525,55 @@ class WC_Gateway_Mondido_HW extends WC_Gateway_Mondido_Abstract {
 			exit( 'Failed to verify transaction' );
 		}
 
-		// Check is Recurring Transaction
-		if ( $transaction_data['transaction_type'] == 'recurring' ) {
-			// Please note:
-			// Configure permanent webhook http://yourshop.local/?wc-api=WC_Gateway_Mondido_HW
+		switch ( $transaction_data['transaction_type'] ) {
+			case 'recurring':
+				// Please note:
+				// Configure permanent webhook http://yourshop.local/?wc-api=WC_Gateway_Mondido_HW
 
-			// Create Order
-			$order = wc_create_order( array(
-				'status'        => $transaction_data['status'] === 'approved' ? 'completed' : 'failed',
-				'customer_id'   => isset( $transaction_data['metadata']['customer']['user_id'] ) ? $transaction_data['metadata']['customer']['user_id'] : '',
-				'customer_note' => '',
-				'total'         => $transaction_data['amount'],
-				'created_via'   => 'mondido',
-			) );
-			add_post_meta( $order->get_id(), '_payment_method', $this->id );
-			update_post_meta( $order->get_id(), '_transaction_id', $transaction_data['id'] );
-			update_post_meta( $order->get_id(), '_mondido_transaction_status', $transaction_data['status'] );
-			update_post_meta( $order->get_id(), '_mondido_transaction_data', $transaction_data );
-			update_post_meta( $order->get_id(), '_mondido_subscription_id', $transaction_data['subscription']['id'] );
+				// Create Order
+				$order = wc_create_order( array(
+					'customer_id'   => isset( $transaction_data['metadata']['customer']['user_id'] ) ? $transaction_data['metadata']['customer']['user_id'] : '',
+					'customer_note' => '',
+					'total'         => $transaction_data['amount'],
+					'created_via'   => 'mondido',
+				) );
+				add_post_meta( $order->get_id(), '_payment_method', $this->id );
+				update_post_meta( $order->get_id(), '_transaction_id', $transaction_data['id'] );
+				update_post_meta( $order->get_id(), '_mondido_transaction_status', $transaction_data['status'] );
+				update_post_meta( $order->get_id(), '_mondido_transaction_data', $transaction_data );
+				update_post_meta( $order->get_id(), '_mondido_subscription_id', $transaction_data['subscription']['id'] );
 
-			// Add address
-			$order->set_address( $transaction_data['metadata']['customer'], 'billing' );
-			$order->set_address( $transaction_data['metadata']['customer'], 'shipping' );
+				// Add address
+				$order->set_address( $transaction_data['metadata']['customer'], 'billing' );
+				$order->set_address( $transaction_data['metadata']['customer'], 'shipping' );
 
-			// Add note
-			$order->add_order_note( sprintf( __( 'Created recurring order by WebHook. Transaction Id %s', 'woocommerce-gateway-mondido' ), $transaction_data['id'] ) );
+				// Add note
+				$order->add_order_note( sprintf( __( 'Created recurring order by WebHook. Transaction Id %s', 'woocommerce-gateway-mondido' ), $transaction_data['id'] ) );
 
-			// Add Recurring product as Payment Fee
-			$fee            = new stdClass();
-			$fee->name      = sprintf( __( 'Subscription #%s ', 'woocommerce-gateway-mondido' ), $transaction_data['subscription']['id'] );
-			$fee->amount    = $transaction_data['amount'];
-			$fee->taxable   = FALSE;
-			$fee->tax_class = '';
-			$fee->tax       = 0;
-			$fee->tax_data  = array();
-			$this->add_order_fee($fee, $order);
+				// Add Recurring product as Payment Fee
+				$fee            = new stdClass();
+				$fee->name      = sprintf( __( 'Subscription #%s ', 'woocommerce-gateway-mondido' ), $transaction_data['subscription']['id'] );
+				$fee->amount    = $transaction_data['amount'];
+				$fee->taxable   = FALSE;
+				$fee->tax_class = '';
+				$fee->tax       = 0;
+				$fee->tax_data  = array();
+				$this->add_order_fee($fee, $order);
 
-			// Calculate totals
-			$order->calculate_totals();
+				// Calculate totals
+				$order->calculate_totals();
 
-			// Force to set total
-			$order->set_total( $transaction_data['amount'] );
+				// Force to set total
+				$order->set_total( $transaction_data['amount'] );
 
-			// Set Transaction ID
-			if ( $transaction_data['status'] === 'approved' ) {
-				$order->payment_complete( $transaction_data['id'] );
-			}
+				// Process transaction
+				$this->handle_transaction( $order, $transaction_data );
 
-			header( sprintf( '%s %s %s', 'HTTP/1.1', '200', 'OK' ), TRUE, '200' );
-			$logger->add( $this->id, "Recurring Order was placed by WebHook. Order ID: {$order->get_id()}. Transaction Id: {$transaction_data['id']}" );
-			exit( "Recurring Order was placed by WebHook. Order ID: {$order->get_id()}. Transaction Id: {$transaction_data['id']}" );
+				header( sprintf( '%s %s %s', 'HTTP/1.1', '200', 'OK' ), TRUE, '200' );
+				$logger->add( $this->id, "Recurring Order was placed by WebHook. Order ID: {$order->get_id()}. Transaction Id: {$transaction_data['id']}" );
+				exit( "Recurring Order was placed by WebHook. Order ID: {$order->get_id()}. Transaction Id: {$transaction_data['id']}" );
+			default:
+				//
 		}
 
 		$order = wc_get_order( $transaction_data['payment_ref'] );
