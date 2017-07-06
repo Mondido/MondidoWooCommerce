@@ -9,8 +9,6 @@ class WC_Gateway_Mondido_Bank extends WC_Gateway_Mondido_HW {
 	 * Init
 	 */
 	public function __construct() {
-		parent::__construct();
-
 		$this->id                 = 'mondido_bank';
 		$this->has_fields         = TRUE;
 		$this->method_title       = __( 'Mondido Direct Bank', 'woocommerce-gateway-mondido' );

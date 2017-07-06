@@ -9,8 +9,6 @@ class WC_Gateway_Mondido_Swish extends WC_Gateway_Mondido_HW {
 	 * Init
 	 */
 	public function __construct() {
-		parent::__construct();
-
 		$this->id                 = 'mondido_swish';
 		$this->has_fields         = TRUE;
 		$this->method_title       = __( 'Mondido Swish', 'woocommerce-gateway-mondido' );
