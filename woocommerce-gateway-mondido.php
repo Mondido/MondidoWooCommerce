@@ -3,7 +3,7 @@
 Plugin Name: WooCommerce Mondido Payments Gateway
 Plugin URI: https://www.mondido.com/
 Description: Provides a Payment Gateway through Mondido for WooCommerce.
-Version: 4.0.1
+Version: 4.0.2
 Author: Mondido
 Author URI: https://www.mondido.com
 License: GNU General Public License v3.0
