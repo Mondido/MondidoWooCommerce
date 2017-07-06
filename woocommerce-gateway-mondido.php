@@ -258,7 +258,21 @@ class WC_Mondido_Payments {
 		global $post;
 
 		$gateway = new WC_Gateway_Mondido_HW();
-		$plans   = $gateway->getSubscriptionPlans();
+
+		try {
+			$plans   = $gateway->getSubscriptionPlans();
+		} catch (Exception $e) {
+			?>
+			<div id="message" class="error">
+				<p>
+					<?php
+					echo sprintf( esc_html__( 'Mondido Error: %s', 'woocommerce-gateway-mondido' ), $e->getMessage() );
+					?>
+				</p>
+			</div>
+			<?php
+			return;
+		}
 
 		$options    = array();
 		$options[0] = __( 'No subscription', 'woocommerce-gateway-mondido' );

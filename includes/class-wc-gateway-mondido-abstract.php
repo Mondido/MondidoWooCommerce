@@ -126,7 +126,8 @@ abstract class WC_Gateway_Mondido_Abstract extends WC_Payment_Gateway {
 
 	/**
 	 * Get Subscription Plans
-	 * @return array|bool|mixed|object
+	 * @return array|mixed|object
+	 * @throws \Exception
 	 */
 	public function getSubscriptionPlans() {
 		$result = wp_remote_get( 'https://api.mondido.com/v1/plans', array(
@@ -136,15 +137,11 @@ abstract class WC_Gateway_Mondido_Abstract extends WC_Payment_Gateway {
 		) );
 
 		if ( is_a( $result, 'WP_Error' ) ) {
-			wc_add_notice( implode( $result->errors['http_request_failed'] ), 'error' );
-
-			return FALSE;
+			throw new Exception( implode( $result->errors['http_request_failed'] ) );
 		}
 
 		if ( $result['response']['code'] != 200 ) {
-			wc_add_notice( $result['body'], 'error' );
-
-			return FALSE;
+			throw new Exception( $result['body'] );
 		}
 
 		return json_decode( $result['body'], TRUE );
@@ -315,8 +312,8 @@ abstract class WC_Gateway_Mondido_Abstract extends WC_Payment_Gateway {
 		$status = $transaction_data['status'];
 
 		// Check transaction was processed
-		$data = get_post_meta( $order->get_id(), '_mondido_transaction_data', TRUE );
-		if ( ! empty($data) ) {
+		$current_status = get_post_meta( $order->get_id(), '_mondido_transaction_status', true );
+		if ($current_status === $status) {
 			return;
 		}
 
@@ -350,35 +347,39 @@ abstract class WC_Gateway_Mondido_Abstract extends WC_Payment_Gateway {
 				break;
 		}
 
-		// Save invoice address
-		if ( $transaction_data['transaction_type'] === 'invoice' ) {
-			$details = $transaction_data['payment_details'];
-			$address = array(
-				'first_name' => $details['first_name'],
-				'last_name'  => $details['last_name'],
-				'company'    => '',
-				'email'      => $details['email'],
-				'phone'      => $details['phone'],
-				'address_1'  => $details['address_1'],
-				'address_2'  => $details['address_2'],
-				'city'       => $details['city'],
-				'state'      => '',
-				'postcode'   => $details['zip'],
-				'country'    => $details['country_code']
-			);
-			update_post_meta( $order->get_id(), '_mondido_invoice_address', $address );
+		switch ( $transaction_data['transaction_type'] ) {
+			case 'invoice':
+				// Save invoice address
+				$details = $transaction_data['payment_details'];
+				$address = array(
+					'first_name' => $details['first_name'],
+					'last_name'  => $details['last_name'],
+					'company'    => '',
+					'email'      => $details['email'],
+					'phone'      => $details['phone'],
+					'address_1'  => $details['address_1'],
+					'address_2'  => $details['address_2'],
+					'city'       => $details['city'],
+					'state'      => '',
+					'postcode'   => $details['zip'],
+					'country'    => $details['country_code']
+				);
+				update_post_meta( $order->get_id(), '_mondido_invoice_address', $address );
 
-			// Format address
-			$formatted = '';
-			$fields    = WC()->countries->get_default_address_fields();
-			foreach ( $address as $key => $value ) {
-				if ( ! isset( $fields[ $key ] ) || empty( $value ) ) {
-					continue;
+				// Format address
+				$formatted = '';
+				$fields    = WC()->countries->get_default_address_fields();
+				foreach ( $address as $key => $value ) {
+					if ( ! isset( $fields[ $key ] ) || empty( $value ) ) {
+						continue;
+					}
+					$formatted .= $fields[ $key ]['label'] . ': ' . $value . "\n";
 				}
-				$formatted .= $fields[ $key ]['label'] . ': ' . $value . "\n";
-			}
 
-			$order->add_order_note( sprintf( __( 'Invoice Address: %s', 'woocommerce-gateway-mondido' ), "\n" . $formatted ) );
+				$order->add_order_note( sprintf( __( 'Invoice Address: %s', 'woocommerce-gateway-mondido' ), "\n" . $formatted ) );
+				break;
+			default:
+				//
 		}
 	}
 }
