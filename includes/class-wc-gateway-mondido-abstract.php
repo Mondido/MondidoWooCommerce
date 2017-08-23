@@ -225,9 +225,7 @@ abstract class WC_Gateway_Mondido_Abstract extends WC_Payment_Gateway {
 			if ( $taxable ) {
 				// Mondido prices include tax
 				$tax = $this->get_tax_total( $amount, $tax_class, true );
-				if ( get_option( 'woocommerce_prices_include_tax' ) === 'no' ) {
-					$amount -= $tax;
-				}
+				$amount -= $tax;
 			}
 
 			$fee            = new stdClass();
