@@ -517,6 +517,9 @@ class WC_Gateway_Mondido_HW extends WC_Gateway_Mondido_Abstract {
 		}
 		set_transient( 'mondido_transaction_' . $data['id'] . $data['status'], true, MINUTE_IN_SECONDS );
 
+		// Log transaction details
+		$logger->add( $this->id, 'Transaction: ' . var_export($data, true) );
+
 		// Lookup transaction
 		$transaction_data = $this->lookupTransaction( $data['id'] );
 		if ( ! $transaction_data ) {
