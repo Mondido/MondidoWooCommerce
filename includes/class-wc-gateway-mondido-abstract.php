@@ -377,6 +377,9 @@ abstract class WC_Gateway_Mondido_Abstract extends WC_Payment_Gateway {
 				}
 
 				$order->add_order_note( sprintf( __( 'Invoice Address: %s', 'woocommerce-gateway-mondido' ), "\n" . $formatted ) );
+
+				// Override shipping address
+				$order->set_address($address, 'shipping');
 				break;
 			default:
 				//
