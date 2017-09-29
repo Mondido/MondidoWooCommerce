@@ -256,45 +256,42 @@ class WC_Mondido_Payments {
 	 */
 	public static function subscription_options_product_tab_content() {
 		global $post;
-
-		$gateway = new WC_Gateway_Mondido_HW();
-
-		try {
-			$plans   = $gateway->getSubscriptionPlans();
-		} catch (Exception $e) {
-			?>
-			<div id="message" class="error">
-				<p>
-					<?php
-					echo sprintf( esc_html__( 'Mondido Error: %s', 'woocommerce-gateway-mondido' ), $e->getMessage() );
-					?>
-				</p>
-			</div>
-			<?php
-			return;
-		}
-
-		$options    = array();
-		$options[0] = __( 'No subscription', 'woocommerce-gateway-mondido' );
-		if ( $plans ) {
-			foreach ( $plans as $item ) {
-				$options[ $item['id'] ] = __( $item['name'], 'woocommerce-gateway-mondido' );
-			}
-		}
-
 		$plan_id = get_post_meta( get_the_ID(), '_mondido_plan_id', TRUE );
+		$gateway = new WC_Gateway_Mondido_HW();
 		?>
 		<div id='subscription_options' class='panel woocommerce_options_panel'>
 			<div class='options_group'>
 				<?php
-				woocommerce_wp_select(
-					array(
-						'id'      => '_mondido_plan_id',
-						'value'   => (string) $plan_id,
-						'label'   => __( 'Subscription plan', 'woocommerce-gateway-mondido' ),
-						'options' => $options
-					)
-				);
+				try {
+					$plans   = $gateway->getSubscriptionPlans();
+					$options    = array();
+					$options[0] = __( 'No subscription', 'woocommerce-gateway-mondido' );
+					if ( $plans ) {
+						foreach ( $plans as $item ) {
+							$options[ $item['id'] ] = __( $item['name'], 'woocommerce-gateway-mondido' );
+						}
+					}
+
+					woocommerce_wp_select(
+						array(
+							'id'      => '_mondido_plan_id',
+							'value'   => (string) $plan_id,
+							'label'   => __( 'Subscription plan', 'woocommerce-gateway-mondido' ),
+							'options' => $options
+						)
+					);
+				} catch (Exception $e) {
+					?>
+					<p class="form-field _mondido_plan_id_field ">
+						<input type="hidden" name="_mondido_plan_id" value="<?php echo esc_attr( $plan_id ); ?>" />
+						<span id="message" class="error">
+					<?php echo sprintf( esc_html__( 'Mondido Error: %s', 'woocommerce-gateway-mondido' ), $e->getMessage() ); ?>
+							<br />
+							<?php _e( 'Please check Mondido settings.', 'woocommerce-gateway-mondido' ); ?>
+				</span>
+					</p>
+					<?php
+				}
 				?>
 			</div>
 		</div>
