@@ -305,22 +305,31 @@ abstract class WC_Gateway_Mondido_Abstract extends WC_Payment_Gateway {
 	/**
 	 * @param WC_Order $order
 	 * @param array $transaction_data
+	 *
+	 * @throws \Exception
 	 * @return void
 	 */
 	public function handle_transaction( $order, $transaction_data ) {
+		$order_id = $order->get_id();
 		$transaction_id = $transaction_data['id'];
 		$status = $transaction_data['status'];
 
 		// Check transaction was processed
-		$current_status = get_post_meta( $order->get_id(), '_mondido_transaction_status', true );
-		if ($current_status === $status) {
-			return;
+		$current_transaction_id = $order->get_transaction_id();
+		$current_status = get_post_meta( $order_id, '_mondido_transaction_status', true );
+		if ( $current_transaction_id === $transaction_id && $current_status === $status ) {
+			throw new \Exception( "Transaction already applied. Order ID: {$order_id}. Transaction ID: {$transaction_id}. Transaction status: {$status}" );
 		}
 
 		// Save Transaction
-		update_post_meta( $order->get_id(), '_transaction_id', $transaction_id );
-		update_post_meta( $order->get_id(), '_mondido_transaction_status', $status );
-		update_post_meta( $order->get_id(), '_mondido_transaction_data', $transaction_data );
+		delete_post_meta( $order_id, '_transaction_id' );
+		update_post_meta( $order_id, '_transaction_id', $transaction_id );
+
+		delete_post_meta( $order_id, '_mondido_transaction_status' );
+		update_post_meta( $order_id, '_mondido_transaction_status', $status );
+
+		delete_post_meta( $order_id, '_mondido_transaction_data' );
+		update_post_meta( $order_id, '_mondido_transaction_data', $transaction_data );
 
 		switch ( $status ) {
 			case 'pending':
@@ -364,7 +373,7 @@ abstract class WC_Gateway_Mondido_Abstract extends WC_Payment_Gateway {
 					'postcode'   => $details['zip'],
 					'country'    => $details['country_code']
 				);
-				update_post_meta( $order->get_id(), '_mondido_invoice_address', $address );
+				update_post_meta( $order_id, '_mondido_invoice_address', $address );
 
 				// Format address
 				$formatted = '';
@@ -402,5 +411,37 @@ abstract class WC_Gateway_Mondido_Abstract extends WC_Payment_Gateway {
 		$add_on_taxes = $_tax->calc_tax( $cost, $tax_rates, $price_incl_tax );
 
 		return array_sum( $add_on_taxes );
+	}
+
+	/**
+	 * Check is Order locked
+	 * @param $order_id
+	 *
+	 * @return bool
+	 */
+	public function is_order_locked( $order_id ) {
+		return (bool) get_transient( 'mondido_order_lock_' . $order_id );
+	}
+
+	/**
+	 * Lock Order
+	 * @param $order_id
+	 *
+	 * @return void
+	 */
+	public function lock_order( $order_id ) {
+		if ( ! $this->is_order_locked($order_id) ) {
+			set_transient( 'mondido_order_lock_' . $order_id, true, 5 * MINUTE_IN_SECONDS );
+		}
+	}
+
+	/**
+	 * Unlock Order
+	 * @param $order_id
+	 *
+	 * @return void
+	 */
+	public function unlock_order( $order_id ) {
+		delete_transient( 'mondido_order_lock_' . $order_id );
 	}
 }
