@@ -216,16 +216,16 @@ abstract class WC_Gateway_Mondido_Abstract extends WC_Payment_Gateway {
 			// There are can be products by Mondido like Invoice fee, discounts etc
 			// Apple fee
 			$amount = (float) $incoming_item['amount'];
-			$tax    = (float) $incoming_item['vat'];
+			//$tax    = (float) $incoming_item['vat'];
+			$tax = 0;
 
 			// Calculate taxes
 			$taxable   = $this->tax_status === 'taxable';
 			$tax_class = $this->tax_class;
 			if ( $taxable ) {
 				// Mondido prices include tax
-				if ( get_option( 'woocommerce_prices_include_tax' ) === 'no' ) {
-					$amount -= $tax;
-				}
+				$tax = $this->get_tax_total( $amount, $tax_class, true );
+				$amount -= $tax;
 			}
 
 			$fee            = new stdClass();
@@ -377,9 +377,30 @@ abstract class WC_Gateway_Mondido_Abstract extends WC_Payment_Gateway {
 				}
 
 				$order->add_order_note( sprintf( __( 'Invoice Address: %s', 'woocommerce-gateway-mondido' ), "\n" . $formatted ) );
+
+				// Override shipping address
+				$order->set_address($address, 'shipping');
 				break;
 			default:
 				//
 		}
+	}
+
+	/**
+	 * Get Tax Total
+	 * @param      $cost
+	 * @param      $tax_class
+	 * @param bool $price_incl_tax
+	 *
+	 * @return float|int
+	 */
+	public function get_tax_total( $cost, $tax_class, $price_incl_tax = false ) {
+		$_tax  = new WC_Tax();
+
+		// Get tax rates
+		$tax_rates    = $_tax->get_rates( $tax_class );
+		$add_on_taxes = $_tax->calc_tax( $cost, $tax_rates, $price_incl_tax );
+
+		return array_sum( $add_on_taxes );
 	}
 }
