@@ -1,6 +1,6 @@
 Mondido Payments 
 =======================
-WooCommerce plugin v4.0.2
+WooCommerce plugin v4.1.0
 
 FAQ: https://github.com/Mondido/WooCommerce/wiki/FAQ   
 
@@ -9,10 +9,15 @@ The subscription service does NOT require WooCommerce Subscriptions, and are fre
 
 ## Changelog
 
+2017-10-22
+- Version 4.1.0
+- Improved order confirmation by WebHook
+- Removed order confirmation from frontend side
+- Added verbose logging
+
 2017-07-06
 - Version 4.0.2
 - Multiple bugs fixed
-
 
 2017-05-05
 - Version 4.0.1
@@ -40,8 +45,7 @@ The subscription service does NOT require WooCommerce Subscriptions, and are fre
 2017-01-10
 - Version 3.4.9
 - Editable checkout text
-- Fix for double "complete" on wewbhook and redirect callbacks
-
+- Fix for double "complete" on webhook and redirect callbacks
 
 2016-12-22 (XMAS EDITION 2)
 - Version 3.4.7
@@ -55,16 +59,13 @@ The subscription service does NOT require WooCommerce Subscriptions, and are fre
 - Version 3.4.4
 - Added support for surcharges and extra fees by adding an Item to the transaction after payment. This is implemented using the surcharges rules in the Mondido Rule Engine.
 
-
 2016-09-01
 - Version 3.4
 - Fixed logos and checkout bugs
 
-
 2016-08-26
 - Version 3.3
 - Added logging and email refactoring
-
 
 2016-08-10
 - Version 3.2
@@ -85,7 +86,6 @@ The subscription service does NOT require WooCommerce Subscriptions, and are fre
 - version 2.6
 - Fixed vat_amount and customer_ref for order
 
-
 2016-04-14
 - version 2.5
 - Added settings for more payment methods
@@ -96,7 +96,6 @@ The subscription service does NOT require WooCommerce Subscriptions, and are fre
 2016-03-11
 - Removed PHP notice warning
 - Added client and admin mail notifications
-
 
 2016-01-18
 - Updated payment logo
