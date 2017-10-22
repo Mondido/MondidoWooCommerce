@@ -1,5 +1,13 @@
 *** WooCommerce Mondido Payments Gateway Changelog ***
 
+2017-10-22 - version 4.1.0
+* Improved order confirmation by WebHook
+* Removed order confirmation from frontend side
+* Added verbose logging
+
+2017-07-06 - version 4.0.2
+* Multiple bugs fixed
+
 2017-05-05 - version 4.0.1
 * Code Improvements
 
@@ -21,7 +29,7 @@
 
 2017-01-10 - version 3.4.9
 * Editable checkout text
-* Fix for double "complete" on wewbhook and redirect callbacks
+* Fix for double "complete" on webhook and redirect callbacks
 
 2016-12-22 - version 3.4.7 (XMAS EDITION 2)
 * Editable button text
