@@ -53,7 +53,10 @@ class WC_Mondido_Payments {
 			$this,
 			'add_recurring_items'
 		), 9, 3 );
-		add_filter( 'woocommerce_free_price_html', __CLASS__ . '::remove_free_price', 10, 2 );
+
+		add_filter( 'woocommerce_get_price_html', __CLASS__ . '::get_recurring_price_html', 10, 2 );
+
+		add_filter( 'mondido_get_recurring_price_html', __CLASS__ . '::mondido_recurring_price_html', 10, 3 );
 
 		// Add Marketing script
 		add_action( 'wp_footer', __CLASS__ . '::marketing_script' );
@@ -391,19 +394,64 @@ class WC_Mondido_Payments {
 	}
 
 	/**
-	 * Remove "Free" label
+	 * Add Recurring price
 	 * @param string $price
 	 * @param WC_Product $product
 	 *
 	 * @return string
 	 */
-	public static function remove_free_price( $price, $product ) {
+	public static function get_recurring_price_html( $price, $product ) {
 		$plan_id = get_post_meta( $product->get_id(), '_mondido_plan_id', TRUE );
 		if ( (int) $plan_id > 0 ) {
-			return '&nbsp;';
+
+			// Use transient for cache
+			$plan = get_transient( 'mondido_plan_' . $plan_id );
+			if ( ! $plan ) {
+				try {
+					$gateway = new WC_Gateway_Mondido_HW();
+					$plan = $gateway->getSubscriptionPlan( $plan_id );
+				} catch (Exception $e) {
+					// API Failed
+					return $price;
+				}
+
+				set_transient( 'mondido_plan_' . $plan_id, $plan, 15 * MINUTE_IN_SECONDS );
+			}
+
+			return apply_filters( 'mondido_get_recurring_price_html', $price, $product, $plan );
 		}
 
 		return $price;
+	}
+
+	/**
+	 * Mondido Recurring Price Formatter
+	 * @param string $price
+	 * @param WC_Product $product
+	 * @param array $plan
+	 *
+	 * @return string
+	 */
+	public static function mondido_recurring_price_html( $price, $product, $plan ) {
+		$currency =  get_woocommerce_currency();
+		$prices = $plan['prices'];
+		$price = isset( $prices[mb_strtolower( $currency )] ) ? $prices[mb_strtolower( $currency )] : $price;
+		$interval_unit = rtrim( $plan['interval_unit'], 's' );
+		$interval = $plan['interval'];
+
+		if ( $interval > 1 ) {
+			return sprintf(
+				__( '%s every %s %s', 'woocommerce-gateway-mondido' ),
+				wc_price( $price, array( 'currency' => $currency) ),
+				$interval, __( $interval_unit )
+			);
+		}
+
+		return sprintf(
+			__( '%s / %s', 'woocommerce-gateway-mondido' ),
+			wc_price( $price, array( 'currency' => $currency) ),
+			__( $interval_unit )
+		);
 	}
 
 	/**

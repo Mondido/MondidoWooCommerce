@@ -148,6 +148,31 @@ abstract class WC_Gateway_Mondido_Abstract extends WC_Payment_Gateway {
 	}
 
 	/**
+	 * Get Subscription Plan
+	 * @param int $plan_id
+	 *
+	 * @return array|mixed|object
+	 * @throws \Exception
+	 */
+	public function getSubscriptionPlan($plan_id) {
+		$result = wp_remote_get( 'https://api.mondido.com/v1/plans/' . $plan_id , array(
+			'headers' => array(
+				'Authorization' => 'Basic ' . base64_encode( "{$this->merchant_id}:{$this->password}" )
+			)
+		) );
+
+		if ( is_a( $result, 'WP_Error' ) ) {
+			throw new Exception( implode( $result->errors['http_request_failed'] ) );
+		}
+
+		if ( $result['response']['code'] != 200 ) {
+			throw new Exception( $result['body'] );
+		}
+
+		return json_decode( $result['body'], TRUE );
+	}
+
+	/**
 	 * Update Order with Incoming Products
 	 *
 	 * @param WC_Order $order
