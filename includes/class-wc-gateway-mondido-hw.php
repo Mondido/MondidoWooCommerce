@@ -373,10 +373,12 @@ class WC_Gateway_Mondido_HW extends WC_Gateway_Mondido_Abstract {
 			'type'        => 'CustomHttp'
 		);
 
+		$amount = array_sum( array_column( $items, 'amount' ) );
+
 		// Prepare fields
 		$fields = array(
-			'amount'       => number_format( $order->get_total(), 2, '.', '' ),
-			'vat_amount'   => number_format( $order->get_total_tax(), 2, '.', '' ),
+			'amount'       => number_format( $amount, 2, '.', '' ),
+			'vat_amount'   => 0,
 			'merchant_id'  => $this->merchant_id,
 			'currency'     => $order->get_currency(),
 			'customer_ref' => $order->get_user_id() != '0' ? $order->get_user_id() : '',
