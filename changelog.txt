@@ -1,5 +1,8 @@
 *** WooCommerce Mondido Payments Gateway Changelog ***
 
+2017-10-27 - version 4.1.1
+* Rounding issue workaround
+
 2017-10-22 - version 4.1.0
 * Improved order confirmation by WebHook
 * Removed order confirmation from frontend side
