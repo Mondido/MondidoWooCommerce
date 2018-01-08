@@ -20,6 +20,9 @@ class WC_Mondido_Payments {
 	 * Constructor
 	 */
 	public function __construct() {
+        // Includes
+        $this->includes();
+
 		// Actions
 		add_filter( 'plugin_action_links_' . plugin_basename( __FILE__ ), array(
 			$this,
@@ -60,7 +63,25 @@ class WC_Mondido_Payments {
 
 		// WC_Order Compatibility for WC < 3.0
         add_action( 'woocommerce_init', __CLASS__ . '::add_compatibility' );
-	}
+
+        // Mondido Checkout
+        add_action( 'wp_ajax_mondido_place_order', array( $this, 'ajax_mondido_place_order' ) );
+        add_action( 'wp_ajax_nopriv_mondido_place_order', array( $this, 'ajax_mondido_place_order' ) );
+
+        add_action( 'wp_ajax_mondido_buy_product', array( $this, 'ajax_mondido_buy_product' ) );
+        add_action( 'wp_ajax_nopriv_mondido_buy_product', array( $this, 'ajax_mondido_buy_product' ) );
+    }
+
+    /**
+     * Load Vendors
+     */
+    public function includes() {
+        $vendorsDir = dirname( __FILE__ ) . '/vendors';
+
+        if ( ! class_exists( '\\League\\ISO3166\\ISO3166', FALSE ) ) {
+            require_once $vendorsDir . '/league-iso3166/vendor/autoload.php';
+        }
+    }
 
 	/**
 	 * Add relevant links to plugins page
@@ -91,6 +112,7 @@ class WC_Mondido_Payments {
 		// Includes
 		include_once( dirname( __FILE__ ) . '/includes/class-wc-gateway-mondido-abstract.php' );
 		include_once( dirname( __FILE__ ) . '/includes/class-wc-gateway-mondido-hw.php' );
+        include_once( dirname( __FILE__ ) . '/includes/class-wc-gateway-mondido-checkout.php' );
 		include_once( dirname( __FILE__ ) . '/includes/class-wc-gateway-mondido-invoice.php' );
 		include_once( dirname( __FILE__ ) . '/includes/class-wc-gateway-mondido-bank.php' );
 		include_once( dirname( __FILE__ ) . '/includes/class-wc-gateway-mondido-swish.php' );
@@ -102,6 +124,7 @@ class WC_Mondido_Payments {
 	 */
 	public function register_gateway( $methods ) {
 		$methods[] = 'WC_Gateway_Mondido_HW';
+        $methods[] = 'WC_Gateway_Mondido_Checkout';
 		$methods[] = 'WC_Gateway_Mondido_Invoice';
 		$methods[] = 'WC_Gateway_Mondido_Bank';
 		$methods[] = 'WC_Gateway_Mondido_Swish';
@@ -115,6 +138,23 @@ class WC_Mondido_Payments {
 	 */
 	public function add_scripts() {
 		wp_enqueue_style( 'wc-gateway-mondido', plugins_url( '/assets/css/style.css', __FILE__ ), array(), FALSE, 'all' );
+        wp_enqueue_script( 'iframe-resizer', untrailingslashit( plugins_url( '/', __FILE__ ) ) . '/assets/js/iframe-resizer/iframeResizer.min.js', array(), NULL, FALSE );
+
+        wp_register_script( 'wc-gateway-mondido-checkout', untrailingslashit( plugins_url( '/', __FILE__ ) ) . '/assets/js/checkout.js', array( 'jquery' ), NULL, TRUE );
+
+        // Localize the script with new data
+        $translation_array = array(
+            'place_order_url' => add_query_arg( 'action', 'mondido_place_order', admin_url( 'admin-ajax.php' ) ),
+            'buy_product_url' => add_query_arg( 'action', 'mondido_buy_product', admin_url( 'admin-ajax.php' ) )
+        );
+        wp_localize_script( 'wc-gateway-mondido-checkout', 'WC_Gateway_Mondido_Checkout', $translation_array );
+
+        if ( is_product() ) {
+            wp_enqueue_script( 'wc-gateway-mondido-product', untrailingslashit( plugins_url( '/', __FILE__ ) ) . '/assets/js/product.js', array( 'wc-gateway-mondido-checkout' ), NULL, TRUE );
+        }
+
+        // Enqueued script with localized data.
+        wp_enqueue_script( 'wc-gateway-mondido-checkout' );
 	}
 
 	/**
@@ -372,6 +412,10 @@ class WC_Mondido_Payments {
 	 * @return mixed
 	 */
 	public function add_recurring_items( $fields, $order, $gateway ) {
+	    if ( ! $order ) {
+            return $fields;
+        }
+
 		foreach ( $order->get_items( 'line_item' ) as $order_item ) {
 			if ( version_compare( WC()->version, '3.0', '>=' ) ) {
 				$plan_id = get_post_meta( $order_item->get_product_id(), '_mondido_plan_id', TRUE );
@@ -422,6 +466,60 @@ class WC_Mondido_Payments {
 		if ( version_compare( WC()->version, '3.0', '<' ) ) {
 			include_once( dirname( __FILE__ ) . '/includes/deprecated/class-wc-order-compatibility-mondido.php' );
 		}
+    }
+
+    /**
+     * Place Order
+     * @return void
+     */
+    public function ajax_mondido_place_order()
+    {
+        define( 'WOOCOMMERCE_CHECKOUT', TRUE );
+        WC()->cart->get_cart_from_session();
+
+        try {
+            // @todo WC 2.6 support
+            $data = array(
+                'payment_method' => 'mondido_checkout',
+                'customer_id'    => get_current_user_id(),
+                'status'         => 'pending'
+            );
+
+            $order_id = WC()->checkout()->create_order( $data );
+            if ( is_wp_error( $order_id ) ) {
+                throw new Exception( $order_id->get_error_message() );
+            }
+
+            $order = wc_get_order( $order_id );
+            do_action( 'woocommerce_checkout_order_processed', $order_id, $data, $order );
+        } catch ( Exception $e ) {
+            wp_send_json_error( $e->getMessage() );
+
+            return;
+        }
+
+        // Mondido Checkout flag
+        update_post_meta( $order_id, '_mondido_checkout', TRUE );
+
+        wp_send_json_success( array(
+            'order_id'     => $order_id,
+            'redirect_url' => $order->get_checkout_payment_url( TRUE )
+        ) );
+    }
+
+    public function ajax_mondido_buy_product()
+    {
+        define( 'WOOCOMMERCE_CART', TRUE );
+        $product_id = stripslashes( $_POST['product_id'] );
+        $qty = stripslashes( $_POST['qty'] );
+
+        // @todo Variations
+
+        WC()->cart->empty_cart( TRUE );
+        WC()->cart->add_to_cart($product_id, $qty);
+        WC()->cart->calculate_totals();
+
+        wp_send_json_success();
     }
 }
 

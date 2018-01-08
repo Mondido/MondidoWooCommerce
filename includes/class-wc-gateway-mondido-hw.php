@@ -257,112 +257,10 @@ class WC_Gateway_Mondido_HW extends WC_Gateway_Mondido_Abstract {
 		$order = wc_get_order( $order_id );
 
 		// Prepare Order Items
-		$items = array();
-
-		// Add Products
-		foreach ( $order->get_items() as $order_item ) {
-			$product_id = $this->is_wc3() ? $order_item->get_product_id() : $order_item['product_id'];
-			$product      = wc_get_product( $product_id );
-			$sku          = $product->get_sku();
-			$price        = $order->get_line_subtotal( $order_item, FALSE, FALSE );
-			$priceWithTax = $order->get_line_subtotal( $order_item, TRUE, FALSE );
-			$tax          = $priceWithTax - $price;
-			$taxPercent   = ( $tax > 0 ) ? round( 100 / ( $price / $tax ) ) : 0;
-
-			$items[] = array(
-				'artno'       => empty( $sku ) ? 'product_id' . $product->get_id() : $sku,
-				'description' => $this->is_wc3() ? $order_item->get_name() : $order_item['name'],
-				'amount'      => number_format( $priceWithTax, 2, '.', '' ),
-				'qty'         => $this->is_wc3() ? $order_item->get_quantity() : $order_item['qty'],
-				'vat'         => number_format( $taxPercent, 2, '.', '' ),
-				'discount'    => 0
-			);
-		}
-
-		// Add Shipping
-		if ( (float) $order->get_shipping_total() > 0 ) {
-			$taxPercent = ( $order->get_shipping_tax() > 0 ) ? round( 100 / ( $order->get_shipping_total() / $order->get_shipping_tax() ) ) : 0;
-
-			$items[] = array(
-				'artno'       => 'shipping',
-				'description' => $order->get_shipping_method(),
-				'amount'      => number_format( $order->get_shipping_total() + $order->get_shipping_tax(), 2, '.', '' ),
-				'qty'         => 1,
-				'vat'         => number_format( $taxPercent, 2, '.', '' ),
-				'discount'    => 0
-			);
-		}
-
-		// Add Discount
-		if ( $order->get_total_discount( FALSE ) > 0 ) {
-			$items[] = array(
-				'artno'       => 'discount',
-				'description' => __( 'Discount', 'woocommerce-gateway-mondido' ),
-				'amount'      => number_format( - 1 * $order->get_total_discount( FALSE ), 2, '.', '' ),
-				'qty'         => 1,
-				'vat'         => 0,
-				'discount'    => 0
-			);
-		}
-
-		// Add Fees
-		foreach ( $order->get_fees() as $fee ) {
-			if ($this->is_wc3()) {
-				/** @var WC_Order_Item_Fee $fee */
-				$fee_name = $fee->get_name();
-				$fee_total = $fee->get_total();
-				$fee_tax = $fee->get_total_tax();
-			} else {
-				$fee_name = $fee['name'];
-				$fee_total = $fee['line_total'];
-				$fee_tax = $fee['line_tax'];
-			}
-
-			$taxPercent = ( $fee_tax > 0 ) ? round( 100 / ( $fee_total / $fee_tax ) ) : 0;
-
-			$items[] = array(
-				'artno'       => 'fee',
-				'description' => $fee_name,
-				'amount'      => number_format( $fee['line_total'] + $fee_tax, 2, '.', '' ),
-				'qty'         => 1,
-				'vat'         => number_format( $taxPercent, 2, '.', '' ),
-				'discount'    => 0
-			);
-		}
+		$items = $this->getOrderItems( $order );
 
 		// Prepare Metadata
-		$metadata = array(
-			'products'  => $order->get_items(),
-			'customer'  => array(
-				'user_id'   => $order->get_user_id(),
-				'firstname' => $order->get_billing_first_name(),
-				'lastname'  => $order->get_billing_last_name(),
-				'address1'  => $order->get_billing_address_1(),
-				'address2'  => $order->get_billing_address_2(),
-				'postcode'  => $order->get_billing_postcode(),
-				'phone'     => $order->get_billing_phone(),
-				'city'      => $order->get_billing_city(),
-				'country'   => $order->get_billing_country(),
-				'state'     => $order->get_billing_state(),
-				'email'     => $order->get_billing_email()
-			),
-			'analytics' => array(),
-			'platform'  => array(
-				'type'             => 'wocoomerce',
-				'version'          => WC()->version,
-				'language_version' => phpversion(),
-				'plugin_version'   => $this->getPluginVersion()
-			)
-		);
-
-		// Prepare Analytics
-		if ( isset( $_COOKIE['m_ref_str'] ) ) {
-			$metadata['analytics']['referrer'] = $_COOKIE['m_ref_str'];
-		}
-		if ( isset( $_COOKIE['m_ad_code'] ) ) {
-			$metadata['analytics']['google']            = array();
-			$metadata['analytics']['google']['ad_code'] = $_COOKIE['m_ad_code'];
-		}
+        $metadata = $this->getMetaData( $order );
 
 		// Prepare WebHook
 		$webhook = array(
@@ -420,8 +318,7 @@ class WC_Gateway_Mondido_HW extends WC_Gateway_Mondido_Abstract {
 	 * @return void
 	 */
 	public function payment_confirm() {
-		// Check Transaction ID is exists
-		if ( empty( $_GET['transaction_id'] ) ) {
+		if ( ! is_wc_endpoint_url( 'order-received' ) ) {
 			return;
 		}
 
@@ -440,6 +337,10 @@ class WC_Gateway_Mondido_HW extends WC_Gateway_Mondido_Abstract {
 		if ( $order && $order->get_payment_method() !== $this->id ) {
 			return;
 		}
+
+		if ( $order->is_paid() ) {
+            return;
+        }
 
 		// Wait for order confirmation from IPN/WebHook
 		set_time_limit( 0 );

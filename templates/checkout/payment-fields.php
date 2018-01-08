@@ -9,6 +9,7 @@ if ( ! defined( 'ABSPATH' ) ) {
 	<?php echo wpautop( wptexturize( $description ) ); ?>
 <?php endif; ?>
 
+<?php $gateway->logos = array_filter($gateway->logos, 'strlen'); ?>
 <?php if ( count( $gateway->logos ) > 0 ): ?>
 	<div class="mondido-logos">
 		<?php foreach ( $gateway->logos as $logo ): ?>
