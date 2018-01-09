@@ -334,7 +334,7 @@ abstract class WC_Gateway_Mondido_Abstract extends WC_Payment_Gateway {
 
 			// Skip product if fee already applied
 			if ( in_array(
-				strtolower( $incoming_item['artno'] ),
+				strtolower( $incoming_item['description'] ),
 				array_map( 'mb_strtolower', $fee_names ) )
 			) {
 				continue;
