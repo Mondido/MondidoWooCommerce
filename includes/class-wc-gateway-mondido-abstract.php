@@ -112,7 +112,7 @@ abstract class WC_Gateway_Mondido_Abstract extends WC_Payment_Gateway {
             ),
             'analytics' => array(),
             'platform'  => array(
-                'type'             => 'wocoomerce',
+                'type'             => 'woocommerce',
                 'version'          => WC()->version,
                 'language_version' => phpversion(),
                 'plugin_version'   => $this->getPluginVersion()
