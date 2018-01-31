@@ -410,7 +410,7 @@ abstract class WC_Gateway_Mondido_Abstract extends WC_Payment_Gateway {
 			),
 			'body'    => array(
 				'transaction_id' => $transaction_id,
-				'amount'         => number_format( $order->get_total(), 2, '.', '' ),
+				'amount'         => number_format( $amount, 2, '.', '' ),
 				'reason'         => $reason
 			)
 		) );
