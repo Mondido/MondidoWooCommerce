@@ -1,11 +1,18 @@
 .mondido-logos {
-	margin-bottom: 8px;
+	display: inline-block;
 }
 
-.mondido-logos img {
-	margin-right:  8px;
-	width:         64px;
-	border:        solid 1px gray;
+.mondido-logo {
+	float: left;
+	display: inline-block;
+	padding: 5px;
+}
+
+.woocommerce-checkout-payment .mondido-logo img {
+	display: block;
+	height: auto;
+	max-width: 100%;
+	border: solid 1px gray;
 	border-radius: 4px;
 }
 
