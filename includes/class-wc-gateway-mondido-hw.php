@@ -354,7 +354,7 @@ class WC_Gateway_Mondido_HW extends WC_Gateway_Mondido_Abstract {
 
 		// Use transient to prevent multiple requests
 		if ( get_transient( 'mondido_transaction_' . $transaction_id . $status ) !== false ) {
-			$this->log( "Payment confirm rejected. Transaction ID: {$transaction_id}. Status: {$status}" );
+			$this->log( "Payment confirmation rejected. Transaction ID: {$transaction_id}. Status: {$status}" );
 			return;
 		}
 		set_transient( 'mondido_transaction_' . $transaction_id . $status, true, MINUTE_IN_SECONDS );
@@ -495,9 +495,9 @@ class WC_Gateway_Mondido_HW extends WC_Gateway_Mondido_Abstract {
 
 					// Use transient to prevent multiple requests
 					if ( get_transient( 'mondido_transaction_' . $transaction_id . $status ) !== false ) {
-						$this->log( "IPN rejected. Transaction ID: {$transaction_id}. Status: {$status}" );
+						$this->log( "[IPN] Payment confirmation rejected. Transaction ID: {$transaction_id}. Status: {$status}" );
 						header( sprintf( '%s %s %s', 'HTTP/1.1', '200', 'OK' ), TRUE, '200' );
-						echo "IPN rejected. Transaction ID: {$transaction_id}. Status: {$status}";
+						echo "[IPN] Payment confirmation rejected. Transaction ID: {$transaction_id}. Status: {$status}";
 						return;
 					}
 					set_transient( 'mondido_transaction_' . $transaction_id . $status, true, MINUTE_IN_SECONDS );
