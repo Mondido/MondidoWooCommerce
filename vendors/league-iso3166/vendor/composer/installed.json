@@ -1,0 +1,58 @@
+[
+    {
+        "name": "league/iso3166",
+        "version": "2.0.0",
+        "version_normalized": "2.0.0.0",
+        "source": {
+            "type": "git",
+            "url": "https://github.com/thephpleague/iso3166.git",
+            "reference": "81c6a2c9250c2689460e5120a9b5952eedd927b0"
+        },
+        "dist": {
+            "type": "zip",
+            "url": "https://api.github.com/repos/thephpleague/iso3166/zipball/81c6a2c9250c2689460e5120a9b5952eedd927b0",
+            "reference": "81c6a2c9250c2689460e5120a9b5952eedd927b0",
+            "shasum": ""
+        },
+        "require": {
+            "php": "^5.6 || ^7.0"
+        },
+        "require-dev": {
+            "friendsofphp/php-cs-fixer": "^2.0@dev || ^2.0",
+            "phpunit/phpunit": "^4.6 || ^5.0"
+        },
+        "time": "2017-05-11 11:54:51",
+        "type": "library",
+        "extra": {
+            "branch-alias": {
+                "dev-master": "2.x-dev"
+            }
+        },
+        "installation-source": "dist",
+        "autoload": {
+            "psr-4": {
+                "League\\ISO3166\\": "src"
+            }
+        },
+        "notification-url": "https://packagist.org/downloads/",
+        "license": [
+            "MIT"
+        ],
+        "authors": [
+            {
+                "name": "Rob Bast",
+                "email": "rob.bast@gmail.com"
+            }
+        ],
+        "description": "ISO 3166-1 PHP Library",
+        "homepage": "https://github.com/thephpleague/iso3166",
+        "keywords": [
+            "3166",
+            "3166-1",
+            "ISO 3166",
+            "countries",
+            "iso",
+            "library"
+        ]
+    }
+]

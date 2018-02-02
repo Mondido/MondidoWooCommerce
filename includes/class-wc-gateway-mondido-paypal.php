@@ -167,6 +167,10 @@ class WC_Gateway_Mondido_PayPal extends WC_Gateway_Mondido_HW {
 	 * @return array
 	 */
 	public function set_payment_method( $fields, $order, $gateway ) {
+        if ( ! $order ) {
+            return $fields;
+        }
+
 		if ( $order->get_payment_method() === $this->id) {
 			$fields['payment_method'] = 'paypal';
 		}

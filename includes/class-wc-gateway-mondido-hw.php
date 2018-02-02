@@ -257,112 +257,10 @@ class WC_Gateway_Mondido_HW extends WC_Gateway_Mondido_Abstract {
 		$order = wc_get_order( $order_id );
 
 		// Prepare Order Items
-		$items = array();
-
-		// Add Products
-		foreach ( $order->get_items() as $order_item ) {
-			$product_id = $this->is_wc3() ? $order_item->get_product_id() : $order_item['product_id'];
-			$product      = wc_get_product( $product_id );
-			$sku          = $product->get_sku();
-			$price        = $order->get_line_subtotal( $order_item, FALSE, FALSE );
-			$priceWithTax = $order->get_line_subtotal( $order_item, TRUE, FALSE );
-			$tax          = $priceWithTax - $price;
-			$taxPercent   = ( $tax > 0 ) ? round( 100 / ( $price / $tax ) ) : 0;
-
-			$items[] = array(
-				'artno'       => empty( $sku ) ? 'product_id' . $product->get_id() : $sku,
-				'description' => $this->is_wc3() ? $order_item->get_name() : $order_item['name'],
-				'amount'      => number_format( $priceWithTax, 2, '.', '' ),
-				'qty'         => $this->is_wc3() ? $order_item->get_quantity() : $order_item['qty'],
-				'vat'         => number_format( $taxPercent, 2, '.', '' ),
-				'discount'    => 0
-			);
-		}
-
-		// Add Shipping
-		if ( (float) $order->get_shipping_total() > 0 ) {
-			$taxPercent = ( $order->get_shipping_tax() > 0 ) ? round( 100 / ( $order->get_shipping_total() / $order->get_shipping_tax() ) ) : 0;
-
-			$items[] = array(
-				'artno'       => 'shipping',
-				'description' => $order->get_shipping_method(),
-				'amount'      => number_format( $order->get_shipping_total() + $order->get_shipping_tax(), 2, '.', '' ),
-				'qty'         => 1,
-				'vat'         => number_format( $taxPercent, 2, '.', '' ),
-				'discount'    => 0
-			);
-		}
-
-		// Add Discount
-		if ( $order->get_total_discount( FALSE ) > 0 ) {
-			$items[] = array(
-				'artno'       => 'discount',
-				'description' => __( 'Discount', 'woocommerce-gateway-mondido' ),
-				'amount'      => number_format( - 1 * $order->get_total_discount( FALSE ), 2, '.', '' ),
-				'qty'         => 1,
-				'vat'         => 0,
-				'discount'    => 0
-			);
-		}
-
-		// Add Fees
-		foreach ( $order->get_fees() as $fee ) {
-			if ($this->is_wc3()) {
-				/** @var WC_Order_Item_Fee $fee */
-				$fee_name = $fee->get_name();
-				$fee_total = $fee->get_total();
-				$fee_tax = $fee->get_total_tax();
-			} else {
-				$fee_name = $fee['name'];
-				$fee_total = $fee['line_total'];
-				$fee_tax = $fee['line_tax'];
-			}
-
-			$taxPercent = ( $fee_tax > 0 ) ? round( 100 / ( $fee_total / $fee_tax ) ) : 0;
-
-			$items[] = array(
-				'artno'       => 'fee',
-				'description' => $fee_name,
-				'amount'      => number_format( $fee['line_total'] + $fee_tax, 2, '.', '' ),
-				'qty'         => 1,
-				'vat'         => number_format( $taxPercent, 2, '.', '' ),
-				'discount'    => 0
-			);
-		}
+		$items = $this->getOrderItems( $order );
 
 		// Prepare Metadata
-		$metadata = array(
-			'products'  => $order->get_items(),
-			'customer'  => array(
-				'user_id'   => $order->get_user_id(),
-				'firstname' => $order->get_billing_first_name(),
-				'lastname'  => $order->get_billing_last_name(),
-				'address1'  => $order->get_billing_address_1(),
-				'address2'  => $order->get_billing_address_2(),
-				'postcode'  => $order->get_billing_postcode(),
-				'phone'     => $order->get_billing_phone(),
-				'city'      => $order->get_billing_city(),
-				'country'   => $order->get_billing_country(),
-				'state'     => $order->get_billing_state(),
-				'email'     => $order->get_billing_email()
-			),
-			'analytics' => array(),
-			'platform'  => array(
-				'type'             => 'wocoomerce',
-				'version'          => WC()->version,
-				'language_version' => phpversion(),
-				'plugin_version'   => $this->getPluginVersion()
-			)
-		);
-
-		// Prepare Analytics
-		if ( isset( $_COOKIE['m_ref_str'] ) ) {
-			$metadata['analytics']['referrer'] = $_COOKIE['m_ref_str'];
-		}
-		if ( isset( $_COOKIE['m_ad_code'] ) ) {
-			$metadata['analytics']['google']            = array();
-			$metadata['analytics']['google']['ad_code'] = $_COOKIE['m_ad_code'];
-		}
+        $metadata = $this->getMetaData( $order );
 
 		// Prepare WebHook
 		$webhook = array(
@@ -420,8 +318,7 @@ class WC_Gateway_Mondido_HW extends WC_Gateway_Mondido_Abstract {
 	 * @return void
 	 */
 	public function payment_confirm() {
-		// Check Transaction ID is exists
-		if ( empty( $_GET['transaction_id'] ) ) {
+		if ( ! is_wc_endpoint_url( 'order-received' ) ) {
 			return;
 		}
 
@@ -441,19 +338,57 @@ class WC_Gateway_Mondido_HW extends WC_Gateway_Mondido_Abstract {
 			return;
 		}
 
-		// Wait for order confirmation from IPN/WebHook
-		set_time_limit( 0 );
-		$times = 0;
-		do {
-			$times ++;
-			if ( $times > 6 ) {
-				break;
-			}
-			sleep( 10 );
+		if ( $order->is_paid() ) {
+            return;
+        }
 
-			clean_post_cache( $order_id );
-			$transaction_id = get_post_meta( $order_id, '_transaction_id', true );
-		} while ( empty( $transaction_id ) );
+		$transaction_id = wc_clean( $_GET['transaction_id'] );
+		$payment_ref    = wc_clean( $_GET['payment_ref'] );
+		$status         = wc_clean( $_GET['status'] );
+
+		// Verify Payment Reference
+		if ( $payment_ref != $order_id ) {
+			wc_add_notice( __( 'Payment Reference verification failed', 'woocommerce-gateway-mondido' ), 'error' );
+			return;
+		}
+
+		// Use transient to prevent multiple requests
+		if ( get_transient( 'mondido_transaction_' . $transaction_id . $status ) !== false ) {
+			$this->log( "Payment confirmation rejected. Transaction ID: {$transaction_id}. Status: {$status}" );
+			return;
+		}
+		set_transient( 'mondido_transaction_' . $transaction_id . $status, true, MINUTE_IN_SECONDS );
+
+		try {
+			// Lookup transaction
+			$transaction_data = $this->lookupTransaction( $transaction_id );
+			if ( ! $transaction_data ) {
+				throw new Exception( __( 'Failed to verify transaction', 'woocommerce-gateway-mondido' ) );
+			}
+
+			// Verify hash
+			$hash = md5( sprintf( '%s%s%s%s%s%s%s',
+				$this->merchant_id,
+				$payment_ref,
+				$order->get_user_id() != '0' ? $order->get_user_id() : '',
+				number_format( $transaction_data['amount'], 2, '.', '' ), // instead $order->get_total()
+				strtolower( $order->get_currency() ),
+				$status,
+				$this->secret
+			) );
+			if ( $hash !== wc_clean( $_GET['hash'] ) ) {
+				throw new Exception( __( 'Hash verification failed', 'woocommerce-gateway-mondido' ) );
+			}
+
+			// Process transaction
+			$this->handle_transaction( $order, $transaction_data );
+		} catch (Exception $e) {
+			$this->log( __CLASS__  . '::' . __METHOD__ . ' Exception: ' . $e->getMessage() );
+			wc_add_notice( sprintf( __( 'Error: %s', 'woocommerce-gateway-mondido' ), $e->getMessage() ), 'error' );
+		}
+
+		// Unlock order processing
+		$this->unlock_order( $payment_ref );
 	}
 
 	/**
@@ -498,7 +433,6 @@ class WC_Gateway_Mondido_HW extends WC_Gateway_Mondido_Abstract {
 
 			// Lookup transaction
 			$transaction_data = $this->lookupTransaction( $data['id'] );
-			//$logger->add( $this->id, 'Loaded Transaction: ' . var_export( json_encode( $transaction_data, true ), true ) );
 			if ( ! $transaction_data ) {
 				throw new \Exception('Failed to lookup transaction');
 			}
@@ -559,6 +493,15 @@ class WC_Gateway_Mondido_HW extends WC_Gateway_Mondido_Abstract {
 					$payment_ref    = $data['payment_ref'];
 					$status         = $data['status'];
 
+					// Use transient to prevent multiple requests
+					if ( get_transient( 'mondido_transaction_' . $transaction_id . $status ) !== false ) {
+						$this->log( "[IPN] Payment confirmation rejected. Transaction ID: {$transaction_id}. Status: {$status}" );
+						header( sprintf( '%s %s %s', 'HTTP/1.1', '200', 'OK' ), TRUE, '200' );
+						echo "[IPN] Payment confirmation rejected. Transaction ID: {$transaction_id}. Status: {$status}";
+						return;
+					}
+					set_transient( 'mondido_transaction_' . $transaction_id . $status, true, MINUTE_IN_SECONDS );
+
 					// Verify hash
 					$hash = md5( sprintf( '%s%s%s%s%s%s%s',
 						$this->merchant_id,
@@ -584,8 +527,8 @@ class WC_Gateway_Mondido_HW extends WC_Gateway_Mondido_Abstract {
 			}
 
 			// Failure
+			$this->log( __CLASS__  . '::' . __METHOD__ . ' IPN: Exception: ' . $e->getMessage() );
 			header( sprintf( '%s %s %s', 'HTTP/1.1', '400', 'FAILURE' ), TRUE, '400' );
-			$logger->add( $this->id, sprintf( '[%s] IPN: %s', 'FAILURE', $e->getMessage() ) );
 			echo sprintf( 'IPN: %s', $e->getMessage() );
 			return;
 		}
