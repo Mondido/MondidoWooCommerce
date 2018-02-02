@@ -5,6 +5,26 @@ if ( ! defined( 'ABSPATH' ) ) {
 } // Exit if accessed directly
 
 abstract class WC_Gateway_Mondido_Abstract extends WC_Payment_Gateway {
+	/**
+	 * Debug Log
+	 *
+	 * @param $message
+	 * @param $level
+	 *
+	 * @return void
+	 */
+	public function log( $message, $level  = WC_Log_Levels::NOTICE ) {
+		// Get Logger instance
+		$log = new WC_Logger();
+
+		// Write message to log
+		if ( ! is_string( $message ) ) {
+			$message = var_export( $message, true );
+		}
+
+		$log->log( $level, $message, array( 'source' => $this->id, '_legacy' => true ) );
+	}
+
     /**
      * Get Order Items
      * @param WC_Order $order
@@ -441,6 +461,9 @@ abstract class WC_Gateway_Mondido_Abstract extends WC_Payment_Gateway {
 		$transaction_id = $transaction_data['id'];
 		$status = $transaction_data['status'];
 
+		// Clean order data cache
+		clean_post_cache( $order_id );
+
 		// Check transaction was processed
 		$current_transaction_id = $order->get_transaction_id();
 		$current_status = get_post_meta( $order_id, '_mondido_transaction_status', true );
@@ -485,7 +508,7 @@ abstract class WC_Gateway_Mondido_Abstract extends WC_Payment_Gateway {
 
         // Extract address
         $address = array();
-        if ( isset( $transaction_data['payment_details'] ) ) {
+        if ( isset( $transaction_data['payment_details'] ) && ! empty( $transaction_data['payment_details']['country_code'] ) ) {
             $details = $transaction_data['payment_details'];
             $country = (new League\ISO3166\ISO3166)->alpha3( $details['country_code'] );
             $address = array(

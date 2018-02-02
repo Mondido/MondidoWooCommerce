@@ -342,19 +342,53 @@ class WC_Gateway_Mondido_HW extends WC_Gateway_Mondido_Abstract {
             return;
         }
 
-		// Wait for order confirmation from IPN/WebHook
-		set_time_limit( 0 );
-		$times = 0;
-		do {
-			$times ++;
-			if ( $times > 6 ) {
-				break;
-			}
-			sleep( 10 );
+		$transaction_id = wc_clean( $_GET['transaction_id'] );
+		$payment_ref    = wc_clean( $_GET['payment_ref'] );
+		$status         = wc_clean( $_GET['status'] );
 
-			clean_post_cache( $order_id );
-			$transaction_id = get_post_meta( $order_id, '_transaction_id', true );
-		} while ( empty( $transaction_id ) );
+		// Verify Payment Reference
+		if ( $payment_ref != $order_id ) {
+			wc_add_notice( __( 'Payment Reference verification failed', 'woocommerce-gateway-mondido' ), 'error' );
+			return;
+		}
+
+		// Use transient to prevent multiple requests
+		if ( get_transient( 'mondido_transaction_' . $transaction_id . $status ) !== false ) {
+			$this->log( "Payment confirm rejected. Transaction ID: {$transaction_id}. Status: {$status}" );
+			return;
+		}
+		set_transient( 'mondido_transaction_' . $transaction_id . $status, true, MINUTE_IN_SECONDS );
+
+		try {
+			// Lookup transaction
+			$transaction_data = $this->lookupTransaction( $transaction_id );
+			if ( ! $transaction_data ) {
+				throw new Exception( __( 'Failed to verify transaction', 'woocommerce-gateway-mondido' ) );
+			}
+
+			// Verify hash
+			$hash = md5( sprintf( '%s%s%s%s%s%s%s',
+				$this->merchant_id,
+				$payment_ref,
+				$order->get_user_id() != '0' ? $order->get_user_id() : '',
+				number_format( $transaction_data['amount'], 2, '.', '' ), // instead $order->get_total()
+				strtolower( $order->get_currency() ),
+				$status,
+				$this->secret
+			) );
+			if ( $hash !== wc_clean( $_GET['hash'] ) ) {
+				throw new Exception( __( 'Hash verification failed', 'woocommerce-gateway-mondido' ) );
+			}
+
+			// Process transaction
+			$this->handle_transaction( $order, $transaction_data );
+		} catch (Exception $e) {
+			$this->log( __CLASS__  . '::' . __METHOD__ . ' Exception: ' . $e->getMessage() );
+			wc_add_notice( sprintf( __( 'Error: %s', 'woocommerce-gateway-mondido' ), $e->getMessage() ), 'error' );
+		}
+
+		// Unlock order processing
+		$this->unlock_order( $payment_ref );
 	}
 
 	/**
@@ -399,7 +433,6 @@ class WC_Gateway_Mondido_HW extends WC_Gateway_Mondido_Abstract {
 
 			// Lookup transaction
 			$transaction_data = $this->lookupTransaction( $data['id'] );
-			//$logger->add( $this->id, 'Loaded Transaction: ' . var_export( json_encode( $transaction_data, true ), true ) );
 			if ( ! $transaction_data ) {
 				throw new \Exception('Failed to lookup transaction');
 			}
@@ -460,6 +493,15 @@ class WC_Gateway_Mondido_HW extends WC_Gateway_Mondido_Abstract {
 					$payment_ref    = $data['payment_ref'];
 					$status         = $data['status'];
 
+					// Use transient to prevent multiple requests
+					if ( get_transient( 'mondido_transaction_' . $transaction_id . $status ) !== false ) {
+						$this->log( "IPN rejected. Transaction ID: {$transaction_id}. Status: {$status}" );
+						header( sprintf( '%s %s %s', 'HTTP/1.1', '200', 'OK' ), TRUE, '200' );
+						echo "IPN rejected. Transaction ID: {$transaction_id}. Status: {$status}";
+						return;
+					}
+					set_transient( 'mondido_transaction_' . $transaction_id . $status, true, MINUTE_IN_SECONDS );
+
 					// Verify hash
 					$hash = md5( sprintf( '%s%s%s%s%s%s%s',
 						$this->merchant_id,
@@ -485,8 +527,8 @@ class WC_Gateway_Mondido_HW extends WC_Gateway_Mondido_Abstract {
 			}
 
 			// Failure
+			$this->log( __CLASS__  . '::' . __METHOD__ . ' IPN: Exception: ' . $e->getMessage() );
 			header( sprintf( '%s %s %s', 'HTTP/1.1', '400', 'FAILURE' ), TRUE, '400' );
-			$logger->add( $this->id, sprintf( '[%s] IPN: %s', 'FAILURE', $e->getMessage() ) );
 			echo sprintf( 'IPN: %s', $e->getMessage() );
 			return;
 		}
