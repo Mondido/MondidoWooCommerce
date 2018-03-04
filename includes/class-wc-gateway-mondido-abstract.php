@@ -116,6 +116,9 @@ abstract class WC_Gateway_Mondido_Abstract extends WC_Payment_Gateway {
      */
     public function getMetaData($order) {
         $metadata = array(
+        	'store_order' => array(
+        		'id' => $order->get_id(),
+	        ),
             'products'  => $order->get_items(),
             'customer'  => array(
                 'user_id'   => $order->get_user_id(),
