@@ -224,6 +224,31 @@ abstract class WC_Gateway_Mondido_Abstract extends WC_Payment_Gateway {
 	}
 
 	/**
+	 * @param $merchant_id
+	 * @param $password
+	 * @param $transaction_id
+	 *
+	 * @return array|mixed|object
+	 */
+	public static function __lookup( $merchant_id, $password, $transaction_id ) {
+		$result = wp_remote_get( 'https://api.mondido.com/v1/transactions/' . $transaction_id, array(
+			'headers' => array(
+				'Authorization' => 'Basic ' . base64_encode( "{$merchant_id}:{$password}" )
+			)
+		) );
+
+		if ( is_a( $result, 'WP_Error' ) ) {
+			throw new Exception( implode( $result->errors['http_request_failed'] ) );
+		}
+
+		if ( $result['response']['code'] != 200 ) {
+			throw new Exception( $result['body'] );
+		} else {
+			return json_decode( $result['body'], TRUE );
+		}
+	}
+
+	/**
 	 * Lookup transaction data
 	 *
 	 * @param $transaction_id
@@ -231,25 +256,32 @@ abstract class WC_Gateway_Mondido_Abstract extends WC_Payment_Gateway {
 	 * @return array|bool
 	 */
 	public function lookupTransaction( $transaction_id ) {
-		$result = wp_remote_get( 'https://api.mondido.com/v1/transactions/' . $transaction_id, array(
-			'headers' => array(
-				'Authorization' => 'Basic ' . base64_encode( "{$this->merchant_id}:{$this->password}" )
-			)
-		) );
+		try {
+			return self::__lookup( $this->merchant_id, $this->password, $transaction_id );
+		} catch ( Exception $e ) {
+			if ( strpos( $e->getMessage(), 'errors.transaction.not_found' ) !== FALSE ) {
+				// Workaround for errors.transaction.not_found
+				$attempt = 0;
+				do {
+					sleep( 5 );
+					$this->log( "lookupTransaction (not found error). Transaction ID: {$transaction_id}. Error: {$e->getMessage()}. Attempt: {$attempt}", WC_Log_Levels::WARNING );
 
-		if ( is_a( $result, 'WP_Error' ) ) {
-			wc_add_notice( implode( $result->errors['http_request_failed'] ), 'error' );
+					try {
+						return self::__lookup( $this->merchant_id, $this->password, $transaction_id );
+					} catch ( Exception $e ) {
+						$attempt++;
+						if ( $attempt > 12 ) {
+							// wc_add_notice( $e->getMessage(), 'error' );
+							break;
+						}
+					}
+				} while ( TRUE );
+			}
 
-			return FALSE;
+			wc_add_notice( $e->getMessage(), 'error' );
 		}
 
-		if ( $result['response']['code'] != 200 ) {
-			wc_add_notice( $result['body'], 'error' );
-
-			return FALSE;
-		}
-
-		return json_decode( $result['body'], TRUE );
+		return FALSE;
 	}
 
 	/**

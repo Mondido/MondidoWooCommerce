@@ -346,6 +346,18 @@ class WC_Gateway_Mondido_HW extends WC_Gateway_Mondido_Abstract {
 		$payment_ref    = wc_clean( $_GET['payment_ref'] );
 		$status         = wc_clean( $_GET['status'] );
 
+		// Transaction ID value failback
+		if ( $_GET['transaction_id'] === true ) {
+			$matches = array();
+			preg_match( '/[\?&]transaction_id=([^&#]*)/m', $_SERVER['REQUEST_URI'], $matches );
+			if ( isset( $matches[1] ) ) {
+				$transaction_id = $matches[1];
+			}
+		}
+
+		$this->log( "Incoming Payment confirmation. Transaction ID: {$transaction_id}. Status: {$status}. Order ID: {$payment_ref}" );
+		$this->log( "Request URI: {$_SERVER['REQUEST_URI']}" );
+
 		// Verify Payment Reference
 		if ( $payment_ref != $order_id ) {
 			wc_add_notice( __( 'Payment Reference verification failed', 'woocommerce-gateway-mondido' ), 'error' );
