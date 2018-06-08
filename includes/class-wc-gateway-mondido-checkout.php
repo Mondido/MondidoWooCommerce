@@ -471,10 +471,10 @@ class WC_Gateway_Mondido_Checkout extends WC_Gateway_Mondido_HW {
      * @return void
      */
     public function payment_confirm() {
-        if ( is_wc_endpoint_url( 'order-received' ) ) {
-            $_GET['transaction_id'] = TRUE;
-            parent::payment_confirm();
-        }
+        //if ( is_wc_endpoint_url( 'order-received' ) ) {
+            //$_GET['transaction_id'] = TRUE;
+            //parent::payment_confirm();
+        //}
     }
 
     /**
