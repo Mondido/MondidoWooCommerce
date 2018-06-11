@@ -178,3 +178,6 @@ class WC_Gateway_Mondido_Swish extends WC_Gateway_Mondido_HW {
 		return $fields;
 	}
 }
+
+// Register Gateway
+WC_Mondido_Payments::register_gateway( 'WC_Gateway_Mondido_Swish' );

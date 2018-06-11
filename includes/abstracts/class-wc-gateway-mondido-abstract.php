@@ -178,7 +178,7 @@ abstract class WC_Gateway_Mondido_Abstract extends WC_Payment_Gateway {
 	 */
 	public static function getPluginVersion() {
 		$plugin_version = get_file_data(
-			dirname( __FILE__ ) . '/../woocommerce-gateway-mondido.php',
+			dirname( __FILE__ ) . '/../../woocommerce-gateway-mondido.php',
 			array( 'Version' ),
 			'woocommerce-gateway-mondido'
 		);

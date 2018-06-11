@@ -347,13 +347,13 @@ class WC_Gateway_Mondido_HW extends WC_Gateway_Mondido_Abstract {
 		$status         = wc_clean( $_GET['status'] );
 
 		// Transaction ID value failback
-		if ( $_GET['transaction_id'] === true ) {
-			$matches = array();
-			preg_match( '/[\?&]transaction_id=([^&#]*)/m', $_SERVER['REQUEST_URI'], $matches );
-			if ( isset( $matches[1] ) ) {
-				$transaction_id = $matches[1];
-			}
-		}
+		//if ( $_GET['transaction_id'] === true ) {
+			//$matches = array();
+			//preg_match( '/[\?&]transaction_id=([^&#]*)/m', $_SERVER['REQUEST_URI'], $matches );
+			//if ( isset( $matches[1] ) ) {
+				//$transaction_id = $matches[1];
+			//}
+		//}
 
 		$this->log( "Incoming Payment confirmation. Transaction ID: {$transaction_id}. Status: {$status}. Order ID: {$payment_ref}" );
 		$this->log( "Request URI: {$_SERVER['REQUEST_URI']}" );
@@ -587,3 +587,6 @@ class WC_Gateway_Mondido_HW extends WC_Gateway_Mondido_Abstract {
 		return $fields;
 	}
 }
+
+// Register Gateway
+WC_Mondido_Payments::register_gateway( 'WC_Gateway_Mondido_HW' );
