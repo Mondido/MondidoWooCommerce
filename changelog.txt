@@ -1,4 +1,9 @@
 *** WooCommerce Mondido Payments Gateway Changelog ***
+2018-06-30 - version 4.3.0
+* Code Improvements
+* Mondido Checkout moved to separate module
+* Bugfixes
+
 2018-05-30 - version 4.2.1
 * Workaround for errors.transaction.not_found
 * Add order id in metadata
