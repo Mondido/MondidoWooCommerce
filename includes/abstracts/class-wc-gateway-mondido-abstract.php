@@ -643,4 +643,14 @@ abstract class WC_Gateway_Mondido_Abstract extends WC_Payment_Gateway {
 	public function unlock_order( $order_id ) {
 		delete_transient( 'mondido_order_lock_' . $order_id );
 	}
+
+	/**
+	 * Get Customer Reference
+	 * @param WC_Order $order
+	 *
+	 * @return string
+	 */
+	public function getCustomerReference( $order ) {
+		return $order->get_user_id() > 0 ? $order->get_user_id() : $order->get_billing_email();
+	}
 }
