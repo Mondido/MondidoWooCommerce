@@ -279,7 +279,7 @@ class WC_Gateway_Mondido_HW extends WC_Gateway_Mondido_Abstract {
 			'vat_amount'   => 0,
 			'merchant_id'  => $this->merchant_id,
 			'currency'     => $order->get_currency(),
-			'customer_ref' => $order->get_user_id() != '0' ? $order->get_user_id() : '',
+			'customer_ref' => $this->getCustomerReference( $order ),
 			'payment_ref'  => $order->get_id(),
 			'success_url'  => $this->get_return_url( $order ),
 			'error_url'    => $order->get_cancel_order_url_raw(),
@@ -382,7 +382,7 @@ class WC_Gateway_Mondido_HW extends WC_Gateway_Mondido_Abstract {
 			$hash = md5( sprintf( '%s%s%s%s%s%s%s',
 				$this->merchant_id,
 				$payment_ref,
-				$order->get_user_id() != '0' ? $order->get_user_id() : '',
+				$this->getCustomerReference( $order ),
 				number_format( $transaction_data['amount'], 2, '.', '' ), // instead $order->get_total()
 				strtolower( $order->get_currency() ),
 				$status,
@@ -518,7 +518,7 @@ class WC_Gateway_Mondido_HW extends WC_Gateway_Mondido_Abstract {
 					$hash = md5( sprintf( '%s%s%s%s%s%s%s',
 						$this->merchant_id,
 						$payment_ref,
-						$order->get_user_id() != '0' ? $order->get_user_id() : '',
+						$this->getCustomerReference( $order ),
 						number_format( $transaction_data['amount'], 2, '.', '' ), // instead $order->get_total()
 						strtolower( $order->get_currency() ),
 						$status,
