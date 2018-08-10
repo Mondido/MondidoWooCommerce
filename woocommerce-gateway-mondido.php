@@ -24,6 +24,9 @@ class WC_Mondido_Payments {
         // Includes
         $this->includes();
 
+		// Install
+		$this->install();
+
 		// Actions
 		add_filter( 'plugin_action_links_' . plugin_basename( __FILE__ ), array(
 			$this,
@@ -68,6 +71,28 @@ class WC_Mondido_Payments {
 
 		return array_merge( $plugin_links, $links );
 	}
+
+	/**
+	 * Install
+	 */
+	public function install() {
+		global $wpdb;
+
+		if ( ! get_option( 'woocommerce_mondido_version' ) ) {
+			$query = "
+CREATE TABLE IF NOT EXISTS `{$wpdb->prefix}mondido_customers` (
+  `customer_id` int(11) NOT NULL AUTO_INCREMENT COMMENT 'Customer ID',
+  `customer_reference` varchar(255) DEFAULT NULL COMMENT 'Customer Reference',
+  `user_id` int(11) DEFAULT NULL COMMENT 'WordPress User ID',
+  `email` varchar(255) DEFAULT NULL COMMENT 'Customer EMail',
+  PRIMARY KEY (`customer_id`),
+  UNIQUE KEY `customer_reference` (`customer_reference`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8;";
+			$wpdb->query( $query );
+
+			add_option( 'woocommerce_mondido_version', '4.3.1' );
+		}
+    }
 
 	/**
 	 * Init localisations and files
