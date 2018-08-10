@@ -649,8 +649,37 @@ abstract class WC_Gateway_Mondido_Abstract extends WC_Payment_Gateway {
 	 * @param WC_Order $order
 	 *
 	 * @return string
+	 * @throws Exception
 	 */
 	public function getCustomerReference( $order ) {
-		return $order->get_user_id() > 0 ? $order->get_user_id() : $order->get_billing_email();
+		global $wpdb;
+
+		$user_id = $order->get_user_id();
+		$email   = $order->get_billing_email();
+
+		$customer_reference = $wpdb->get_var( $wpdb->prepare(
+			"SELECT customer_reference FROM {$wpdb->prefix}mondido_customers WHERE user_id = %s AND email = %s;",
+			$user_id,
+			$email
+		) );
+
+		if ( ! $customer_reference ) {
+			$customer_reference = substr( str_shuffle( implode('', array_merge( range('a', 'z' ), range( '0', '9') ) ) ), 0, 6 );
+
+			$attempts = 0;
+			do {
+				$result = $wpdb->insert($wpdb->prefix . 'mondido_customers', array(
+					'customer_reference' => $customer_reference,
+					'user_id'            => $order->get_user_id(),
+					'email'              => $order->get_billing_email()
+				));
+				$attempts++;
+				if ($attempts >= 5) {
+					throw new Exception('Failed to create customer reference');
+				}
+			} while ( ! $result );
+		}
+
+		return $customer_reference;
 	}
 }
