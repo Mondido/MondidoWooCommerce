@@ -119,7 +119,7 @@ abstract class WC_Gateway_Mondido_Abstract extends WC_Payment_Gateway {
         	'store_order' => array(
         		'id' => $order->get_id(),
 	        ),
-            'products'  => $order->get_items(),
+            'products'  => $this->getOrderItems( $order ),
             'customer'  => array(
                 'user_id'   => $order->get_user_id(),
                 'firstname' => $order->get_billing_first_name(),
