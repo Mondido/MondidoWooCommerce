@@ -542,7 +542,7 @@ class WC_Gateway_Mondido_HW extends WC_Gateway_Mondido_Abstract {
 			$this->log( __CLASS__  . '::' . __METHOD__ . ' IPN: Exception: ' . $e->getMessage() );
 			header( sprintf( '%s %s %s', 'HTTP/1.1', '400', 'FAILURE' ), TRUE, '400' );
 			echo sprintf( 'IPN: %s', $e->getMessage() );
-			return;
+			exit();
 		}
 
 		// Unlock order processing
@@ -559,7 +559,7 @@ class WC_Gateway_Mondido_HW extends WC_Gateway_Mondido_Abstract {
 		header( sprintf( '%s %s %s', 'HTTP/1.1', '200', 'OK' ), TRUE, '200' );
 		$logger->add( $this->id, sprintf( '[%s] IPN: %s', 'SUCCESS', $message ) );
 		echo sprintf( 'IPN: %s', $message );
-		return;
+		exit();
 	}
 
 	/**
