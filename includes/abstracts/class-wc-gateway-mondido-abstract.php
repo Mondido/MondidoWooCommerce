@@ -113,12 +113,14 @@ abstract class WC_Gateway_Mondido_Abstract extends WC_Payment_Gateway {
      * @param WC_Order $order
      *
      * @return array
+     * @throws Exception
      */
     public function getMetaData($order) {
         $metadata = array(
         	'store_order' => array(
         		'id' => $order->get_id(),
 	        ),
+	        'customer_reference' => $this->getCustomerReference( $order ),
             'products'  => $this->getOrderItems( $order ),
             'customer'  => array(
                 'user_id'   => $order->get_user_id(),
