@@ -27,6 +27,9 @@ class WC_Mondido_Payments {
 		// Install
 		$this->install();
 
+		register_activation_hook( __FILE__, array( $this, 'flush_rewrite_rules' ) );
+		register_deactivation_hook( __FILE__, array( $this, 'flush_rewrite_rules' ) );
+
 		// Actions
 		add_filter( 'plugin_action_links_' . plugin_basename( __FILE__ ), array(
 			$this,
@@ -95,19 +98,23 @@ CREATE TABLE IF NOT EXISTS `{$wpdb->prefix}mondido_customers` (
     }
 
 	/**
+	 * Flush rewrite rules on plugin activation
+	 */
+	public function flush_rewrite_rules() {
+		flush_rewrite_rules();
+	}
+
+	/**
 	 * Init localisations and files
 	 */
 	public function init() {
-		if ( ! class_exists( 'WC_Payment_Gateway' ) ) {
-			return;
-		}
-
 		// Localization
 		load_plugin_textdomain( 'woocommerce-gateway-mondido', FALSE, dirname( plugin_basename( __FILE__ ) ) . '/languages' );
 
 		// Includes
 		include_once( dirname( __FILE__ ) . '/includes/class-wc-mondido-admin-actions.php' );
 		include_once( dirname( __FILE__ ) . '/includes/class-wc-mondido-subscriptions.php' );
+		include_once( dirname( __FILE__ ) . '/includes/class-wc-mondido-subscriptions-account.php' );
 	}
 
 	/**
