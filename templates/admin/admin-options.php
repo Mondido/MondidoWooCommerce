@@ -32,7 +32,7 @@ if ( ! defined( 'ABSPATH' ) ) {
 <p>
 	<?php
 	echo sprintf(
-		__('Please setup WebHook in <a href="%s" target="_blank">Mondido Dashboard</a>.', 'woocommerce-gateway-mondido'),
+		__('Please setup WebHooks in <a href="%s" target="_blank">Mondido Dashboard</a>.', 'woocommerce-gateway-mondido'),
 		'https://admin.mondido.com/en/webhook_templates'
 	);
 	?>
@@ -42,6 +42,14 @@ if ( ! defined( 'ABSPATH' ) ) {
 		__('WebHook URL: <a href="%s" target="_blank">%s</a>. Type: JSON. Method: POST. Event: "After a success payment"', 'woocommerce-gateway-mondido'),
 		WC()->api_request_url( get_class( $gateway ) ),
 		WC()->api_request_url( get_class( $gateway ) )
+	);
+	?>
+    <br>
+	<?php
+	echo sprintf(
+		__('WebHook URL: <a href="%s" target="_blank">%s</a>. Type: JSON. Method: POST. Event: "When a credit card is stored"', 'woocommerce-gateway-mondido'),
+		add_query_arg( 'store_card', 'true', WC()->api_request_url( get_class( $gateway ) ) ),
+		add_query_arg( 'store_card', 'true', WC()->api_request_url( get_class( $gateway ) ) )
 	);
 	?>
 </p>

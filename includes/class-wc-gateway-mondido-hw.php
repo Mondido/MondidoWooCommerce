@@ -9,7 +9,7 @@ class WC_Gateway_Mondido_HW extends WC_Gateway_Mondido_Abstract {
 	 */
 	public function __construct() {
 		$this->id                 = 'mondido_hw';
-		$this->has_fields         = TRUE;
+		$this->has_fields         = true;
 		$this->method_title       = __( 'Mondido', 'woocommerce-gateway-mondido' );
 		$this->method_description = '';
 
@@ -17,6 +17,7 @@ class WC_Gateway_Mondido_HW extends WC_Gateway_Mondido_Abstract {
 		$this->supports = array(
 			'products',
 			'refunds',
+			'tokenization',
 			// @todo Implement WC Subscription support
 			//'subscriptions',
 			//'subscription_cancellation',
@@ -40,17 +41,17 @@ class WC_Gateway_Mondido_HW extends WC_Gateway_Mondido_Abstract {
 		$this->init_settings();
 
 		// Define variables
-		$this->enabled     = isset( $this->settings['enabled'] ) ? $this->settings['enabled'] : 'no';
-		$this->title       = isset( $this->settings['title'] ) ? $this->settings['title'] : __( 'Mondido Payments', 'woocommerce-gateway-mondido' );
-		$this->description = isset( $this->settings['description'] ) ? $this->settings['description'] : '';
-		$this->merchant_id = isset( $this->settings['merchant_id'] ) ? $this->settings['merchant_id'] : '';
-		$this->secret      = isset( $this->settings['secret'] ) ? $this->settings['secret'] : '';
-		$this->password    = isset( $this->settings['password'] ) ? $this->settings['password'] : '';
-		$this->testmode    = isset( $this->settings['testmode'] ) ? $this->settings['testmode'] : 'no';
-		$this->authorize   = isset( $this->settings['authorize'] ) ? $this->settings['authorize'] : 'no';
-		$this->tax_status  = isset( $this->settings['tax_status'] ) ? $this->settings['tax_status'] : 'none';
-		$this->tax_class   = isset( $this->settings['tax_class'] ) ? $this->settings['tax_class'] : 'standard';
-		//$this->store_cards       = isset( $this->settings['store_cards'] ) ? $this->settings['store_cards'] : 'no';
+		$this->enabled           = isset( $this->settings['enabled'] ) ? $this->settings['enabled'] : 'no';
+		$this->title             = isset( $this->settings['title'] ) ? $this->settings['title'] : __( 'Mondido Payments', 'woocommerce-gateway-mondido' );
+		$this->description       = isset( $this->settings['description'] ) ? $this->settings['description'] : '';
+		$this->merchant_id       = isset( $this->settings['merchant_id'] ) ? $this->settings['merchant_id'] : '';
+		$this->secret            = isset( $this->settings['secret'] ) ? $this->settings['secret'] : '';
+		$this->password          = isset( $this->settings['password'] ) ? $this->settings['password'] : '';
+		$this->testmode          = isset( $this->settings['testmode'] ) ? $this->settings['testmode'] : 'no';
+		$this->authorize         = isset( $this->settings['authorize'] ) ? $this->settings['authorize'] : 'no';
+		$this->tax_status        = isset( $this->settings['tax_status'] ) ? $this->settings['tax_status'] : 'none';
+		$this->tax_class         = isset( $this->settings['tax_class'] ) ? $this->settings['tax_class'] : 'standard';
+		$this->store_cards       = isset( $this->settings['store_cards'] ) ? $this->settings['store_cards'] : 'no';
 		$this->logos             = isset( $this->settings['logos'] ) ? $this->settings['logos'] : array();
 		$this->order_button_text = isset( $this->settings['order_button_text'] ) ? $this->settings['order_button_text'] : __( 'Pay with Mondido', 'woocommerce-gateway-mondido' );
 
@@ -158,13 +159,13 @@ class WC_Gateway_Mondido_HW extends WC_Gateway_Mondido_Abstract {
 				'description' => __( 'If you have a fee for invoice payments, what tax class should be applied to that fee', 'woocommerce-gateway-mondido' ),
 				'default'     => 'standard'
 			),
-			//'store_cards'       => array(
-			//	'title'       => __( 'Allow Stored Cards', 'woocommerce-gateway-mondido' ),
-			//	'label'       => __( 'Allow logged in customers to save credit card profiles to use for future purchases', 'woocommerce-gateway-mondido' ),
-			//	'type'        => 'checkbox',
-			//	'description' => '',
-			//	'default'     => 'no',
-			//),
+			'store_cards'       => array(
+				'title'       => __( 'Allow Stored Cards', 'woocommerce-gateway-mondido' ),
+				'label'       => __( 'Allow logged in customers to save credit card profiles to use for future purchases', 'woocommerce-gateway-mondido' ),
+				'type'        => 'checkbox',
+				'description' => '',
+				'default'     => 'no',
+			),
 			'logos'             => array(
 				'title'          => __( 'Logos', 'woocommerce-gateway-mondido' ),
 				'description'    => __( 'Logos on checkout', 'woocommerce-gateway-mondido' ),
@@ -180,7 +181,7 @@ class WC_Gateway_Mondido_HW extends WC_Gateway_Mondido_Abstract {
 					'mp'         => __( 'MasterPass', 'woocommerce-gateway-mondido' ),
 					'swish'      => __( 'Swish', 'woocommerce-gateway-mondido' ),
 				),
-				'select_buttons' => TRUE,
+				'select_buttons' => true,
 			),
 			'order_button_text' => array(
 				'title'   => __( 'Text for "Place Order" button', 'woocommerce-gateway-mondido' ),
@@ -210,8 +211,6 @@ class WC_Gateway_Mondido_HW extends WC_Gateway_Mondido_Abstract {
 	 * @return void
 	 */
 	public function payment_fields() {
-		// @todo Store Cards
-
 		wc_get_template(
 			'checkout/payment-fields.php',
 			array(
@@ -220,6 +219,14 @@ class WC_Gateway_Mondido_HW extends WC_Gateway_Mondido_Abstract {
 			'',
 			dirname( __FILE__ ) . '/../templates/'
 		);
+
+		if ( $this->store_cards === 'yes' ) {
+			if ( ! is_add_payment_method_page() ) {
+				$this->tokenization_script();
+				$this->saved_payment_methods();
+				$this->save_payment_method_checkbox();
+			}
+		}
 	}
 
 	/**
@@ -227,10 +234,35 @@ class WC_Gateway_Mondido_HW extends WC_Gateway_Mondido_Abstract {
 	 *
 	 * @param int $order_id
 	 *
-	 * @return array
+	 * @return array|false
 	 */
 	public function process_payment( $order_id ) {
 		$order = wc_get_order( $order_id );
+
+		if ( $this->store_cards === 'yes' ) {
+			$token_id = isset( $_POST['wc-mondido_hw-payment-token'] ) ? wc_clean( $_POST['wc-mondido_hw-payment-token'] ) : 'new';
+
+			// Try to load saved token
+			if ( $token_id !== 'new' ) {
+				$token = new WC_Payment_Token_Mondido( $token_id );
+				if ( ! $token->get_id() ) {
+					wc_add_notice( __( 'Failed to load token.', 'woocommerce-gateway-mondido' ), 'error' );
+
+					return false;
+				}
+
+				// Check access
+				if ( $token->get_user_id() !== $order->get_user_id() ) {
+					wc_add_notice( __( 'Access denied.', 'woocommerce-gateway-mondido' ), 'error' );
+
+					return false;
+				}
+
+				update_post_meta( $order_id, '_mondido_use_store_card', $token->get_id() );
+			} elseif ( isset( $_POST['wc-mondido_hw-new-payment-method'] ) && $_POST['wc-mondido_hw-new-payment-method'] === 'true' ) {
+				update_post_meta( $order_id, '_mondido_store_card', 1 );
+			}
+		}
 
 		return array(
 			'result'   => 'success',
@@ -255,6 +287,9 @@ class WC_Gateway_Mondido_HW extends WC_Gateway_Mondido_Abstract {
 	 */
 	public function receipt_page( $order_id ) {
 		$order = wc_get_order( $order_id );
+
+		// Get Stored Card
+		$store_card = get_post_meta( $order_id, '_mondido_store_card', true );
 
 		// Prepare Order Items
 		$items = $this->getOrderItems( $order );
@@ -285,6 +320,7 @@ class WC_Gateway_Mondido_HW extends WC_Gateway_Mondido_Abstract {
 			'error_url'    => $order->get_cancel_order_url_raw(),
 			'metadata'     => $metadata,
 			'test'         => $this->testmode === 'yes' ? 'true' : 'false',
+			'store_card'   => $store_card ? 'true' : 'false',
 			'authorize'    => $this->authorize === 'yes' ? 'true' : '',
 			'items'        => $items,
 			'webhook'      => $webhook
@@ -419,6 +455,63 @@ class WC_Gateway_Mondido_HW extends WC_Gateway_Mondido_Abstract {
 			if ( ! $data ) {
 				throw new \Exception( 'Invalid data' );
 			}
+
+			if ( isset( $_GET['store_card'] ) ) {
+				$paymentToken = $data['token'];
+				$card_holder  = $data['card_holder'];
+				$card_number  = $data['card_number'];
+				$card_type    = $data['card_type'];
+				$expires      = strtotime( $data['expires'] );
+				$transaction  = @json_decode( $data['transaction'], TRUE );
+
+				// Check is Token already exists
+				$tokens = WC_Payment_Tokens::get_tokens( array(
+					'type' => 'Mondido',
+				) );
+
+				$tokens = array_filter( $tokens, function( $token, $id ) use ($paymentToken) {
+					if ( $token->get_token() === $paymentToken ) {
+						return true;
+					}
+
+					return false;
+				}, ARRAY_FILTER_USE_BOTH );
+
+				if ( count( $tokens ) > 0 ) {
+					$message = 'This Credit Card already stored: ' . $card_number;
+					header( sprintf( '%s %s %s', 'HTTP/1.1', '200', 'OK' ), TRUE, '200' );
+					$logger->add( $this->id, sprintf( '[%s] IPN: %s', 'SUCCESS', $message ) );
+					echo sprintf( 'IPN: %s', $message );
+				}
+
+				// Get Order
+				$store_order = $transaction['metadata']['store_order']['id'];
+				$order       = wc_get_order( $store_order );
+
+				// Create Credit Card
+				$token = new WC_Payment_Token_Mondido();
+				$token->set_gateway_id( $this->id );
+				$token->set_token( $paymentToken );
+				$token->set_last4( substr( $card_number, -4 ) );
+				$token->set_expiry_year( date( 'Y', $expires ) );
+				$token->set_expiry_month( date( 'm', $expires ) );
+				$token->set_card_type( strtolower( $card_type ) );
+				$token->set_user_id( $order->get_customer_id() );
+				$token->set_masked_number( $card_number );
+				$token->set_card_holder( $card_holder );
+				$token->save();
+
+				$order->add_payment_token( $token );
+
+				// Success
+				$message = 'Stored Credit Card: ' . $card_number;
+				header( sprintf( '%s %s %s', 'HTTP/1.1', '200', 'OK' ), TRUE, '200' );
+				$logger->add( $this->id, sprintf( '[%s] IPN: %s', 'SUCCESS', $message ) );
+				echo sprintf( 'IPN: %s', $message );
+				return;
+			}
+
+			$logger->add( $this->id, var_export($data, true) );
 
 			if ( empty( $data['id'] ) ) {
 				throw new \Exception( 'Invalid transaction ID' );
