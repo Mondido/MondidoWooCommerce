@@ -332,6 +332,31 @@ abstract class WC_Gateway_Mondido_Abstract extends WC_Payment_Gateway {
 	}
 
 	/**
+	 * Get Subscription Plan
+	 * @param $plan_id
+	 *
+	 * @return array|mixed|object
+	 * @throws Exception
+	 */
+	public function getSubscriptionPlan( $plan_id ) {
+		$result = wp_remote_get( 'https://api.mondido.com/v1/plans/' . $plan_id, array(
+			'headers' => array(
+				'Authorization' => 'Basic ' . base64_encode( "{$this->merchant_id}:{$this->password}" )
+			)
+		) );
+
+		if ( is_a( $result, 'WP_Error' ) ) {
+			throw new Exception( implode( $result->errors['http_request_failed'] ) );
+		}
+
+		if ( $result['response']['code'] != 200 ) {
+			throw new Exception( $result['body'] );
+		}
+
+		return json_decode( $result['body'], TRUE );
+	}
+
+	/**
 	 * Update Order with Incoming Products
 	 *
 	 * @param WC_Order $order
@@ -683,5 +708,98 @@ abstract class WC_Gateway_Mondido_Abstract extends WC_Payment_Gateway {
 		}
 
 		return $customer_reference;
+	}
+
+	/**
+	 * Get Customer References
+	 * @param $user_id
+	 *
+	 * @return array
+	 */
+	public function getCustomerReferences( $user_id ) {
+		global $wpdb;
+
+		$results = $wpdb->get_results( $wpdb->prepare(
+			"SELECT * FROM {$wpdb->prefix}mondido_customers WHERE user_id = %s;",
+			$user_id
+		), ARRAY_A );
+
+		if ( is_array( $results ) ) {
+			return $results;
+		}
+
+		return array();
+	}
+
+	/**
+	 * Get Mondido Customer ID by Reference
+	 * @param $customer_reference
+	 *
+	 * @return bool
+	 */
+	public function getMondidoCustomerId( $customer_reference ) {
+		$result = wp_remote_get( 'https://api.mondido.com/v1/customers?filter[ref]=' . $customer_reference, array(
+			'headers' => array(
+				'Authorization' => 'Basic ' . base64_encode( "{$this->merchant_id}:{$this->password}" )
+			)
+		) );
+
+		$result = json_decode( $result['body'], TRUE );
+		if (isset($result[0])) {
+			return $result[0]['id'];
+		}
+
+		return false;
+	}
+
+	/**
+	 * Get Mondido Subscriptions by Customer Id
+	 * @param $customer_id
+	 *
+	 * @return array|mixed|object
+	 * @throws Exception
+	 */
+	public function getMondidoSubscriptions( $customer_id ) {
+		$result = wp_remote_get( 'https://api.mondido.com/v1/customers/' . $customer_id . '/subscriptions', array(
+			'headers' => array(
+				'Authorization' => 'Basic ' . base64_encode( "{$this->merchant_id}:{$this->password}" )
+			)
+		) );
+
+		if ( is_a( $result, 'WP_Error' ) ) {
+			throw new Exception( 'Failed to get subscriptions' );
+		}
+
+		$subscriptions = json_decode( $result['body'], TRUE );
+		if (isset($subscriptions['name']) && $subscriptions['name'] === 'errors.customer.not_found') {
+			throw new Exception( 'Customer not found' );
+		}
+
+		return $subscriptions;
+	}
+
+	/**
+	 * Cancel Mondido Subscription
+	 * @param $subscription_id
+	 *
+	 * @return array
+	 * @throws Exception
+	 */
+	public function cancelMondidoSubscription( $subscription_id ) {
+		$result = wp_remote_request( 'https://api.mondido.com/v1/subscriptions/' . $subscription_id, array(
+			'method'  => 'PUT',
+			'headers' => array(
+				'Authorization' => 'Basic ' . base64_encode( "{$this->merchant_id}:{$this->password}" )
+			),
+			'body'    => array(
+				'status' => 'cancelled'
+			)
+		) );
+
+		if ( is_a( $result, 'WP_Error' ) ) {
+			throw new Exception( 'Failed to cancel subscription' );
+		}
+
+		return json_decode( $result['body'], TRUE );
 	}
 }
