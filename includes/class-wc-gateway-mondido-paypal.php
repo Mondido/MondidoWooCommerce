@@ -101,7 +101,7 @@ class WC_Gateway_Mondido_PayPal extends WC_Gateway_Mondido_HW {
 			),
 			'secret'            => array(
 				'title'       => __( 'Secret', 'woocommerce-gateway-mondido' ),
-				'type'        => 'text',
+				'type'        => 'password',
 				'description' => __( 'Given secret code from Mondido', 'woocommerce-gateway-mondido' ),
 				'default'     => ''
 			),

@@ -120,7 +120,7 @@ class WC_Gateway_Mondido_HW extends WC_Gateway_Mondido_Abstract {
 			),
 			'secret'            => array(
 				'title'       => __( 'Secret', 'woocommerce-gateway-mondido' ),
-				'type'        => 'text',
+				'type'        => 'password',
 				'description' => __( 'Given secret code from Mondido', 'woocommerce-gateway-mondido' ),
 				'default'     => ''
 			),
@@ -159,17 +159,11 @@ class WC_Gateway_Mondido_HW extends WC_Gateway_Mondido_Abstract {
 				'description' => __( 'If you have a fee for invoice payments, what tax class should be applied to that fee', 'woocommerce-gateway-mondido' ),
 				'default'     => 'standard'
 			),
-			'store_cards'       => array(
-				'title'       => __( 'Allow Stored Cards', 'woocommerce-gateway-mondido' ),
-				'label'       => __( 'Allow logged in customers to save credit card profiles to use for future purchases', 'woocommerce-gateway-mondido' ),
-				'type'        => 'checkbox',
-				'description' => '',
-				'default'     => 'no',
-			),
 			'logos'             => array(
 				'title'          => __( 'Logos', 'woocommerce-gateway-mondido' ),
 				'description'    => __( 'Logos on checkout', 'woocommerce-gateway-mondido' ),
 				'type'           => 'multiselect',
+                'css'            => 'height: 200px;',
 				'options'        => array(
 					'visa'       => __( 'Visa', 'woocommerce-gateway-mondido' ),
 					'mastercard' => __( 'MasterCard', 'woocommerce-gateway-mondido' ),
