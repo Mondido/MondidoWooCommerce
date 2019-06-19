@@ -1,6 +1,22 @@
 <?php
-/** @var WC_Order $order */
-/** @var array $transaction */
+/**
+ * Mondido payment actions file
+ *
+ * @author Mondido
+ * @package mondido
+ **/
+
+/**
+ *  Call class variables WC_Order
+ *
+ * @var WC_Order $order
+ */
+
+/**
+ *  Call variables $transaction
+ *
+ * @var array $transaction
+ */
 
 if ( ! defined( 'ABSPATH' ) ) {
 	exit;
