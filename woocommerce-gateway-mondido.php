@@ -1,5 +1,5 @@
 <?php
-/*
+/**
  * Plugin Name: WooCommerce Mondido Payments Gateway
  * Plugin URI: https://www.mondido.com/
  * Description: Provides a Payment Gateway through Mondido for WooCommerce.
@@ -10,43 +10,43 @@
  * Domain Path: /languages
  * WC requires at least: 3.0.0
  * WC tested up to: 3.4.2
+ * Provides a Payment Gateway through Mondido for WooCommerce.
+ *
+ * @package Mondido
  */
 
 if ( ! defined( 'ABSPATH' ) ) {
 	exit;
-} // Exit if accessed directly
+} // Exit if accessed directly!
 
+/**
+ * Class WC_Mondido_Payments
+ */
 class WC_Mondido_Payments {
 	/**
 	 * Constructor
 	 */
 	public function __construct() {
-        // Includes
+	    // Includes!
         $this->includes();
 
-		// Install
+		// Install!
 		$this->install();
 
 		register_activation_hook( __FILE__, array( $this, 'flush_rewrite_rules' ) );
 		register_deactivation_hook( __FILE__, array( $this, 'flush_rewrite_rules' ) );
 
-		// Actions
-		add_filter( 'plugin_action_links_' . plugin_basename( __FILE__ ), array(
-			$this,
-			'plugin_action_links'
-		) );
+		// Actions!
+		add_filter( 'plugin_action_links_' . plugin_basename( __FILE__ ), array( $this, 'plugin_action_links' ) );
 		add_action( 'plugins_loaded', array( $this, 'init' ), 0 );
-		add_action( 'woocommerce_loaded', array(
-			$this,
-			'woocommerce_loaded'
-		) );
+		add_action( 'woocommerce_loaded', array( $this, 'woocommerce_loaded' ) );
 		add_action( 'wp_enqueue_scripts', array( $this, 'add_scripts' ) );
 
-		// Add Marketing script
+		// Add Marketing script!
 		add_action( 'wp_footer', __CLASS__ . '::marketing_script' );
 
-		// WC_Order Compatibility for WC < 3.0
-        add_action( 'woocommerce_init', __CLASS__ . '::add_compatibility' );
+		/** WC_Order Compatibility for WC < 3.0 */
+		add_action( 'woocommerce_init', __CLASS__ . '::add_compatibility' );
     }
 
     /**
@@ -55,7 +55,7 @@ class WC_Mondido_Payments {
     public function includes() {
         $vendorsDir = dirname( __FILE__ ) . '/vendors';
 
-        if ( ! class_exists( '\\League\\ISO3166\\ISO3166', FALSE ) ) {
+        if ( ! class_exists( '\\League\\ISO3166\\ISO3166', false ) ) {
             require_once $vendorsDir . '/league-iso3166/vendor/autoload.php';
         }
     }
@@ -69,7 +69,7 @@ class WC_Mondido_Payments {
 	 */
 	public function plugin_action_links( $links ) {
 		$plugin_links = array(
-			'<a href="' . esc_url( admin_url( 'admin.php?page=wc-settings&tab=checkout&section=mondido_hw' ) ) . '">' . __( 'Settings', 'woocommerce-gateway-mondido' ) . '</a>'
+			'<a href="' . esc_url( admin_url( 'admin.php?page=wc-settings&tab=checkout&section=mondido_hw' ) ) . '">' . __( 'Settings', 'woocommerce-gateway-mondido' ) . '</a>',
 		);
 
 		return array_merge( $plugin_links, $links );
@@ -108,34 +108,34 @@ CREATE TABLE IF NOT EXISTS `{$wpdb->prefix}mondido_customers` (
 	 * Init localisations and files
 	 */
 	public function init() {
-		// Localization
-		load_plugin_textdomain( 'woocommerce-gateway-mondido', FALSE, dirname( plugin_basename( __FILE__ ) ) . '/languages' );
+		// Localization!
+		load_plugin_textdomain( 'woocommerce-gateway-mondido', false, dirname( plugin_basename( __FILE__ ) ) . '/languages' );
 
-		// Includes
-		include_once( dirname( __FILE__ ) . '/includes/class-wc-mondido-admin-actions.php' );
-		include_once( dirname( __FILE__ ) . '/includes/class-wc-mondido-subscriptions.php' );
-		include_once( dirname( __FILE__ ) . '/includes/class-wc-mondido-subscriptions-account.php' );
+		// Includes!
+		include_once dirname( __FILE__ ) . '/includes/class-wc-mondido-admin-actions.php';
+		include_once dirname( __FILE__ ) . '/includes/class-wc-mondido-subscriptions.php';
+		include_once dirname( __FILE__ ) . '/includes/class-wc-mondido-subscriptions-account.php';
 	}
 
 	/**
 	 * WooCommerce Loaded: load classes
 	 */
 	public function woocommerce_loaded() {
-		// Includes
-		include_once( dirname( __FILE__ ) . '/includes/abstracts/class-wc-gateway-mondido-abstract.php' );
-		include_once( dirname( __FILE__ ) . '/includes/class-wc-gateway-mondido-hw.php' );
-		include_once( dirname( __FILE__ ) . '/includes/class-wc-gateway-mondido-invoice.php' );
-		include_once( dirname( __FILE__ ) . '/includes/class-wc-gateway-mondido-bank.php' );
-		include_once( dirname( __FILE__ ) . '/includes/class-wc-gateway-mondido-swish.php' );
-		include_once( dirname( __FILE__ ) . '/includes/class-wc-gateway-mondido-paypal.php' );
-		include_once( dirname( __FILE__ ) . '/includes/class-wc-payment-token-mondido.php' );
+		// Includes!
+		include_once dirname( __FILE__ ) . '/includes/abstracts/class-wc-gateway-mondido-abstract.php';
+		include_once dirname( __FILE__ ) . '/includes/class-wc-gateway-mondido-hw.php';
+		include_once dirname( __FILE__ ) . '/includes/class-wc-gateway-mondido-invoice.php';
+		include_once dirname( __FILE__ ) . '/includes/class-wc-gateway-mondido-bank.php';
+		include_once dirname( __FILE__ ) . '/includes/class-wc-gateway-mondido-swish.php';
+		include_once dirname( __FILE__ ) . '/includes/class-wc-gateway-mondido-paypal.php';
+		include_once dirname( __FILE__ ) . '/includes/class-wc-payment-token-mondido.php';
 	}
 
 	/**
 	 * Add Scripts
 	 */
 	public function add_scripts() {
-		wp_enqueue_style( 'wc-gateway-mondido', plugins_url( '/assets/css/style.css', __FILE__ ), array(), FALSE, 'all' );
+		wp_enqueue_style( 'wc-gateway-mondido', plugins_url( '/assets/css/style.css', __FILE__ ), array(), false, 'all' );
 	}
 
 	/**
@@ -161,6 +161,7 @@ CREATE TABLE IF NOT EXISTS `{$wpdb->prefix}mondido_customers` (
 	 *
 	 * @param string $class_name
 	 */
+
 	public static function register_gateway( $class_name ) {
 		global $mondido_gateways;
 
@@ -169,16 +170,16 @@ CREATE TABLE IF NOT EXISTS `{$wpdb->prefix}mondido_customers` (
 		}
 
 		if ( ! isset( $mondido_gateways[ $class_name ] ) ) {
-			// Initialize instance
+			// Initialize instance!
 			if ( $gateway = new $class_name ) {
 				$mondido_gateways[] = $class_name;
 
-				// Register gateway instance
+				// Register gateway instance!
 				add_filter( 'woocommerce_payment_gateways', function ( $methods ) use ( $gateway ) {
 					$methods[] = $gateway;
-
 					return $methods;
-				} );
+				}
+				);
 			}
 		}
 	}
