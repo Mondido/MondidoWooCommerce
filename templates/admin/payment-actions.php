@@ -8,65 +8,65 @@ if ( ! defined( 'ABSPATH' ) ) {
 ?>
 
 <div>
-	<strong><?php _e( 'Payment Info', 'woocommerce-gateway-mondido' ) ?></strong>
+	<strong><?php esc_html_e( 'Payment Info', 'woocommerce-gateway-mondido' ); ?></strong>
 	<br />
-	<strong><?php _e( 'Type', 'woocommerce-gateway-mondido' ) ?>:</strong> <?php echo esc_html( $transaction['transaction_type'] ); ?>
+	<strong><?php esc_html_e( 'Type', 'woocommerce-gateway-mondido' ); ?>:</strong> <?php echo esc_html( $transaction['transaction_type'] ); ?>
 	<br />
-	<strong><?php _e( 'Status', 'woocommerce-gateway-mondido' ) ?>: </strong> <?php echo esc_html( $transaction['status'] ); ?>
+	<strong><?php esc_html_e( 'Status', 'woocommerce-gateway-mondido' ); ?>: </strong> <?php echo esc_html( $transaction['status'] ); ?>
 	<br />
-	<?php if ($transaction['transaction_type'] === 'credit_card'): ?>
-		<strong><?php _e( 'Number', 'woocommerce-gateway-mondido' ) ?>:</strong> <?php echo esc_html( $transaction['card_number'] ); ?>
+	<?php if ( 'credit_card' === $transaction ['transaction_type'] ) : ?>
+		<strong><?php esc_html_e( 'Number', 'woocommerce-gateway-mondido' ); ?>:</strong> <?php echo esc_html( $transaction['card_number'] ); ?>
 		<br />
-		<strong><?php _e( 'Name', 'woocommerce-gateway-mondido' ) ?>:</strong> <?php echo esc_html( $transaction['card_holder'] ); ?>
+		<strong><?php esc_html_e( 'Name', 'woocommerce-gateway-mondido' ); ?>:</strong> <?php echo esc_html( $transaction['card_holder'] ); ?>
 		<br />
-		<strong><?php _e( 'Card', 'woocommerce-gateway-mondido' ) ?>:</strong> <?php echo esc_html( $transaction['payment_details']['card_type'] ); ?>
+		<strong><?php esc_html_e( 'Card', 'woocommerce-gateway-mondido' ); ?>:</strong> <?php echo esc_html( $transaction['payment_details']['card_type'] ); ?>
 		<br />
-		<strong><?php _e( '3D Secure', 'woocommerce-gateway-mondido' ) ?>:</strong> <?php echo empty( $transaction['mpi_ref'] ) ? __('No', 'woocommerce') : __('Yes', 'woocommerce') ?>
+		<strong><?php esc_html_e( '3D Secure', 'woocommerce-gateway-mondido' ); ?>:</strong> <?php echo empty( $transaction ['mpi_ref'] ) ? esc_html_e( 'No', 'woocommerce' ) : esc_html_e( 'Yes', 'woocommerce' ); ?>
 		<br />
 	<?php endif; ?>
-	<?php if ($transaction['transaction_type'] === 'invoice'): ?>
-		<strong><?php _e( 'Social Security Number', 'woocommerce-gateway-mondido' ) ?>:</strong> <?php echo esc_html( $transaction['payment_details']['ssn'] ); ?>
+	<?php if ( 'invoice' === $transaction ['transaction_type'] ) : ?>
+		<strong><?php esc_html_e( 'Social Security Number', 'woocommerce-gateway-mondido' ); ?>:</strong> <?php echo esc_html( $transaction['payment_details']['ssn'] ); ?>
 		<br />
-		<strong><?php _e( 'First name', 'woocommerce-gateway-mondido' ) ?>:</strong> <?php echo esc_html( $transaction['payment_details']['first_name'] ); ?>
+		<strong><?php esc_html_e( 'First name', 'woocommerce-gateway-mondido' ); ?>:</strong> <?php echo esc_html( $transaction['payment_details']['first_name'] ); ?>
 		<br />
-		<strong><?php _e( 'Last name', 'woocommerce-gateway-mondido' ) ?>:</strong> <?php echo esc_html( $transaction['payment_details']['last_name'] ); ?>
+		<strong><?php esc_html_e( 'Last name', 'woocommerce-gateway-mondido' ); ?>:</strong> <?php echo esc_html( $transaction['payment_details']['last_name'] ); ?>
 		<br />
-		<strong><?php _e( 'Email', 'woocommerce-gateway-mondido' ) ?>:</strong> <?php echo esc_html( $transaction['payment_details']['email'] ); ?>
+		<strong><?php esc_html_e( 'Email', 'woocommerce-gateway-mondido' ); ?>:</strong> <?php echo esc_html( $transaction['payment_details']['email'] ); ?>
 		<br />
-		<strong><?php _e( 'Phone', 'woocommerce-gateway-mondido' ) ?>:</strong> <?php echo esc_html( $transaction['payment_details']['phone'] ); ?>
+		<strong><?php esc_html_e( 'Phone', 'woocommerce-gateway-mondido' ); ?>:</strong> <?php echo esc_html( $transaction['payment_details']['phone'] ); ?>
 		<br />
-		<strong><?php _e( 'Address 1', 'woocommerce-gateway-mondido' ) ?>:</strong> <?php echo esc_html( $transaction['payment_details']['address_1'] ); ?>
+		<strong><?php esc_html_e( 'Address 1', 'woocommerce-gateway-mondido' ); ?>:</strong> <?php echo esc_html( $transaction['payment_details']['address_1'] ); ?>
 		<br />
-		<strong><?php _e( 'Address 2', 'woocommerce-gateway-mondido' ) ?>:</strong> <?php echo esc_html( $transaction['payment_details']['address_2'] ); ?>
+		<strong><?php esc_html_e( 'Address 2', 'woocommerce-gateway-mondido' ); ?>:</strong> <?php echo esc_html( $transaction['payment_details']['address_2'] ); ?>
 		<br />
-		<strong><?php _e( 'City', 'woocommerce-gateway-mondido' ) ?>:</strong> <?php echo esc_html( $transaction['payment_details']['city'] ); ?>
+		<strong><?php esc_html_e( 'City', 'woocommerce-gateway-mondido' ); ?>:</strong> <?php echo esc_html( $transaction['payment_details']['city'] ); ?>
 		<br />
-		<strong><?php _e( 'Postal Code', 'woocommerce-gateway-mondido' ) ?>:</strong> <?php echo esc_html( $transaction['payment_details']['zip'] ); ?>
+		<strong><?php esc_html_e( 'Postal Code', 'woocommerce-gateway-mondido' ); ?>:</strong> <?php echo esc_html( $transaction['payment_details']['zip'] ); ?>
 		<br />
-		<strong><?php _e( 'Country', 'woocommerce-gateway-mondido' ) ?>:</strong> <?php echo esc_html( $transaction['payment_details']['country_code'] ); ?>
-		<br />
-	<?php endif; ?>
-	<?php if ($transaction['transaction_type'] === 'bank'): ?>
-		<strong><?php _e( 'Bank name', 'woocommerce-gateway-mondido' ) ?>:</strong> <?php echo esc_html( $transaction['payment_details']['bank_name'] ); ?>
-		<br />
-		<strong><?php _e( 'Last digits of account', 'woocommerce-gateway-mondido' ) ?>:</strong> <?php echo esc_html( $transaction['payment_details']['bank_acc_lastdigits'] ); ?>
+		<strong><?php esc_html_e( 'Country', 'woocommerce-gateway-mondido' ); ?>:</strong> <?php echo esc_html( $transaction['payment_details']['country_code'] ); ?>
 		<br />
 	<?php endif; ?>
-	<?php if ($transaction['transaction_type'] === 'swish'): ?>
-		<strong><?php _e( 'Swish number', 'woocommerce-gateway-mondido' ) ?>:</strong> <?php echo esc_html( $transaction['payment_details']['swish_number'] ); ?>
+	<?php if ( 'bank' === $transaction['transaction_type'] ) : ?>
+		<strong><?php esc_html_e( 'Bank name', 'woocommerce-gateway-mondido' ); ?>:</strong> <?php echo esc_html( $transaction['payment_details']['bank_name'] ); ?>
+		<br />
+		<strong><?php esc_html_e( 'Last digits of account', 'woocommerce-gateway-mondido' ); ?>:</strong> <?php echo esc_html( $transaction['payment_details']['bank_acc_lastdigits'] ); ?>
 		<br />
 	<?php endif; ?>
-	<a href="<?php echo esc_url( $transaction['href'] ); ?>" target="_blank"><?php _e( 'Payment Link', 'woocommerce-gateway-mondido' ) ?></a>
+	<?php if ( 'swish' === $transaction['transaction_type'] ) : ?>
+		<strong><?php esc_html_e( 'Swish number', 'woocommerce-gateway-mondido' ); ?>:</strong> <?php echo esc_html( $transaction['payment_details']['swish_number'] ); ?>
+		<br />
+	<?php endif; ?>
+	<a href="<?php echo esc_url( $transaction['href'] ); ?>" target="_blank"><?php esc_html_e( 'Payment Link', 'woocommerce-gateway-mondido' ); ?></a>
 	<br />
-	<a href="<?php echo esc_url( 'https://admin.mondido.com/transactions/' . $transaction['id'] ); ?>" target="_blank"><?php _e( 'View at Mondido', 'woocommerce-gateway-mondido' ) ?></a>
+	<a href="<?php echo esc_url( 'https://admin.mondido.com/transactions/' . $transaction['id'] ); ?>" target="_blank"><?php esc_html_e( 'View at Mondido', 'woocommerce-gateway-mondido' ); ?></a>
 	<br />
 
-	<?php if ( $transaction['status'] === 'authorized' ): ?>
+	<?php if ( 'authorized' === $transaction ['status'] ) : ?>
 		<button id="mondido_capture"
-				data-nonce="<?php echo wp_create_nonce( 'mondido' ); ?>"
-				data-transaction-id="<?php echo esc_html( $transaction['id'] ); ?>"
-				data-order-id="<?php echo esc_html( $order->get_id() ); ?>">
-			<?php _e( 'Capture Payment', 'woocommerce-gateway-mondido' ) ?>
+				data-nonce="<?php echo esc_attr( wp_create_nonce( 'mondido' ) ); ?>"
+				data-transaction-id="<?php echo esc_attr( $transaction['id'] ); ?>"
+				data-order-id="<?php echo esc_attr( $order->get_id() ); ?>">
+			<?php esc_html_e( 'Capture Payment', 'woocommerce-gateway-mondido' ); ?>
 		</button>
 	<?php endif; ?>
 </div>
