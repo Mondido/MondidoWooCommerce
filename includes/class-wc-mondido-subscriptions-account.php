@@ -1,8 +1,14 @@
 <?php
+/**
+ * Mondido  Mondido subscriptions account
+ *
+ * @author Mondido
+ * @package mondido
+ **/
 
 if ( ! defined( 'ABSPATH' ) ) {
 	exit;
-} // Exit if accessed directly
+} // Exit if accessed directly!
 
 class WC_Mondido_Subscriptions_Account {
 	/**
