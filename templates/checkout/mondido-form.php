@@ -1,4 +1,12 @@
 <?php
+/**
+ * Mondido checkout mondido form
+ *
+ * @author Mondido
+ * @package mondido
+ **/
+
+
 /** @var array $fields */
 /** @var WC_Order $order */
 /** @var WC_Payment_Gateway $gateway */
@@ -12,7 +20,7 @@ if ( ! defined( 'ABSPATH' ) ) {
 </div>
 
 <form action="https://pay.mondido.com/v1/form" method="post" id="mondido_form" style="display: none;">
-	<?php foreach ( $fields as $key => $value ): ?>
+	<?php foreach ( $fields as $key => $value ) : ?>
 		<input type="hidden" name="<?php echo esc_html( $key ); ?>" value="<?php echo esc_html( is_array( $value ) ? json_encode( $value ) : $value ); ?>">
 	<?php endforeach; ?>
 </form>
