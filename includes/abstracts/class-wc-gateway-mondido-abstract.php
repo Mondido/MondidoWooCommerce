@@ -1,8 +1,14 @@
 <?php
+/**
+ * Mondido gateway mondido abstract
+ *
+ * @author Mondido
+ * @package mondido
+ **/
 
 if ( ! defined( 'ABSPATH' ) ) {
 	exit;
-} // Exit if accessed directly
+} // Exit if accessed directly!
 
 abstract class WC_Gateway_Mondido_Abstract extends WC_Payment_Gateway {
 	/**
@@ -13,11 +19,11 @@ abstract class WC_Gateway_Mondido_Abstract extends WC_Payment_Gateway {
 	 *
 	 * @return void
 	 */
-	public function log( $message, $level  = WC_Log_Levels::NOTICE ) {
-		// Get Logger instance
+	public function log( $message, $level = WC_Log_Levels::NOTICE ) {
+		// Get Logger instance!
 		$log = new WC_Logger();
 
-		// Write message to log
+		// Write message to log!
 		if ( ! is_string( $message ) ) {
 			$message = var_export( $message, true );
 		}
@@ -34,13 +40,13 @@ abstract class WC_Gateway_Mondido_Abstract extends WC_Payment_Gateway {
     public function getOrderItems($order) {
         $items = array();
 
-        // Add Products
+        // Add Products!
         foreach ( $order->get_items() as $order_item ) {
             $product_id = $this->is_wc3() ? $order_item->get_product_id() : $order_item['product_id'];
             $product      = wc_get_product( $product_id );
             $sku          = $product->get_sku();
-            $price        = $order->get_line_subtotal( $order_item, FALSE, FALSE );
-            $priceWithTax = $order->get_line_subtotal( $order_item, TRUE, FALSE );
+            $price        = $order->get_line_subtotal( $order_item, false, false );
+            $priceWithTax = $order->get_line_subtotal( $order_item, true, false );
             $tax          = $priceWithTax - $price;
             $taxPercent   = ( $tax > 0 ) ? round( 100 / ( $price / $tax ) ) : 0;
 
@@ -50,11 +56,11 @@ abstract class WC_Gateway_Mondido_Abstract extends WC_Payment_Gateway {
                 'amount'      => number_format( $priceWithTax, 2, '.', '' ),
                 'qty'         => $this->is_wc3() ? $order_item->get_quantity() : $order_item['qty'],
                 'vat'         => number_format( $taxPercent, 2, '.', '' ),
-                'discount'    => 0
+                'discount'    => 0,
             );
         }
 
-        // Add Shipping
+        // Add Shipping!
         if ( (float) $order->get_shipping_total() > 0 ) {
             $taxPercent = ( $order->get_shipping_tax() > 0 ) ? round( 100 / ( $order->get_shipping_total() / $order->get_shipping_tax() ) ) : 0;
 
@@ -64,23 +70,23 @@ abstract class WC_Gateway_Mondido_Abstract extends WC_Payment_Gateway {
                 'amount'      => number_format( $order->get_shipping_total() + $order->get_shipping_tax(), 2, '.', '' ),
                 'qty'         => 1,
                 'vat'         => number_format( $taxPercent, 2, '.', '' ),
-                'discount'    => 0
+                'discount'    => 0,
             );
         }
 
-        // Add Discount
-        if ( $order->get_total_discount( FALSE ) > 0 ) {
+        // Add Discount!
+        if ( $order->get_total_discount( false ) > 0 ) {
             $items[] = array(
                 'artno'       => 'discount',
                 'description' => __( 'Discount', 'woocommerce-gateway-mondido' ),
-                'amount'      => number_format( - 1 * $order->get_total_discount( FALSE ), 2, '.', '' ),
+                'amount'      => number_format( - 1 * $order->get_total_discount( false ), 2, '.', '' ),
                 'qty'         => 1,
                 'vat'         => 0,
-                'discount'    => 0
+                'discount'    => 0,
             );
         }
 
-        // Add Fees
+        // Add Fees!
         foreach ( $order->get_fees() as $fee ) {
             if ($this->is_wc3()) {
                 /** @var WC_Order_Item_Fee $fee */
@@ -101,7 +107,7 @@ abstract class WC_Gateway_Mondido_Abstract extends WC_Payment_Gateway {
                 'amount'      => number_format( $fee['line_total'] + $fee_tax, 2, '.', '' ),
                 'qty'         => 1,
                 'vat'         => number_format( $taxPercent, 2, '.', '' ),
-                'discount'    => 0
+                'discount'    => 0,
             );
         }
 
@@ -133,18 +139,18 @@ abstract class WC_Gateway_Mondido_Abstract extends WC_Payment_Gateway {
                 'city'      => $order->get_billing_city(),
                 'country'   => $order->get_billing_country(),
                 'state'     => $order->get_billing_state(),
-                'email'     => $order->get_billing_email()
+                'email'     => $order->get_billing_email(),
             ),
             'analytics' => array(),
             'platform'  => array(
                 'type'             => 'woocommerce',
                 'version'          => WC()->version,
                 'language_version' => phpversion(),
-                'plugin_version'   => $this->getPluginVersion()
+                'plugin_version'   => $this->getPluginVersion(),
             )
         );
 
-        // Prepare Analytics
+        // Prepare Analytics!
         if ( isset( $_COOKIE['m_ref_str'] ) ) {
             $metadata['analytics']['referrer'] = $_COOKIE['m_ref_str'];
         }
@@ -163,7 +169,7 @@ abstract class WC_Gateway_Mondido_Abstract extends WC_Payment_Gateway {
 	 * @return array
 	 */
 	public static function getTaxClasses() {
-		// Get tax classes
+		// Get tax classes!
 		$tax_classes           = array_filter( array_map( 'trim', explode( "\n", get_option( 'woocommerce_tax_classes' ) ) ) );
 		$tax_class_options     = array();
 		$tax_class_options[''] = __( 'Standard', 'woocommerce' );
@@ -182,7 +188,7 @@ abstract class WC_Gateway_Mondido_Abstract extends WC_Payment_Gateway {
 		$plugin_version = get_file_data(
 			dirname( __FILE__ ) . '/../../woocommerce-gateway-mondido.php',
 			array( 'Version' ),
-			'woocommerce-gateway-mondido'
+			'woocommerce-gateway-mondido',
 		);
 
 		return isset( $plugin_version[0] ) ? $plugin_version[0] : '';
@@ -203,11 +209,12 @@ abstract class WC_Gateway_Mondido_Abstract extends WC_Payment_Gateway {
 	 *
 	 * @return int
 	 */
-	public function add_order_fee($fee, &$order) {
-		if ($this->is_wc3()) {
+
+	public function add_order_fee( $fee, &$order ) {
+		if ( $this->is_wc3() ) {
 			$item = new WC_Order_Item_Fee();
 			$item->set_props( array(
-				'name'      => $fee->name,
+			    'name'      => $fee->name,
 				'tax_class' => $fee->taxable ? $fee->tax_class : 0,
 				'total'     => $fee->amount,
 				'total_tax' => $fee->tax,
@@ -246,7 +253,7 @@ abstract class WC_Gateway_Mondido_Abstract extends WC_Payment_Gateway {
 		if ( $result['response']['code'] != 200 ) {
 			throw new Exception( $result['body'] );
 		} else {
-			return json_decode( $result['body'], TRUE );
+			return json_decode( $result['body'], true );
 		}
 	}
 
@@ -261,8 +268,8 @@ abstract class WC_Gateway_Mondido_Abstract extends WC_Payment_Gateway {
 		try {
 			return self::__lookup( $this->merchant_id, $this->password, $transaction_id );
 		} catch ( Exception $e ) {
-			if ( strpos( $e->getMessage(), 'errors.transaction.not_found' ) !== FALSE ) {
-				// Workaround for errors.transaction.not_found
+			if ( strpos( $e->getMessage(), 'errors.transaction.not_found' ) !== false ) {
+				// Workaround for errors.transaction.not_found!
 				$attempt = 0;
 				do {
 					sleep( 5 );
@@ -277,13 +284,13 @@ abstract class WC_Gateway_Mondido_Abstract extends WC_Payment_Gateway {
 							break;
 						}
 					}
-				} while ( TRUE );
+				} while ( true );
 			}
 
 			wc_add_notice( $e->getMessage(), 'error' );
 		}
 
-		return FALSE;
+		return false;
 	}
 
 	/**
@@ -324,11 +331,11 @@ abstract class WC_Gateway_Mondido_Abstract extends WC_Payment_Gateway {
 			throw new Exception( implode( $result->errors['http_request_failed'] ) );
 		}
 
-		if ( $result['response']['code'] != 200 ) {
+		if ( $result['response']['code'] === 200 ) {
 			throw new Exception( $result['body'] );
 		}
 
-		return json_decode( $result['body'], TRUE );
+		return json_decode( $result['body'], true );
 	}
 
 	/**
@@ -353,7 +360,7 @@ abstract class WC_Gateway_Mondido_Abstract extends WC_Payment_Gateway {
 			throw new Exception( $result['body'] );
 		}
 
-		return json_decode( $result['body'], TRUE );
+		return json_decode( $result['body'], true );
 	}
 
 	/**
@@ -366,7 +373,7 @@ abstract class WC_Gateway_Mondido_Abstract extends WC_Payment_Gateway {
 	 */
 	public function updateOrderWithIncomingProducts( $order, array $transaction ) {
 		if ($this->is_wc3()) {
-			// Get IDs of Products
+			// Get IDs of Products!
 			$ids = array();
 			$items = $order->get_items( 'line_item' );
 			foreach ($items as $item) {
@@ -374,7 +381,7 @@ abstract class WC_Gateway_Mondido_Abstract extends WC_Payment_Gateway {
 				$ids[] = $item->get_product_id();
 			}
 
-			// Get Fee names
+			// Get Fee names!
 			$fee_names = array();
 			$items = $order->get_fees();
 			foreach ($items as $item) {
@@ -383,18 +390,18 @@ abstract class WC_Gateway_Mondido_Abstract extends WC_Payment_Gateway {
 			}
 
 		} else {
-			// Get IDs of Products
+			// Get IDs of Products!
 			$items = $order->get_items( 'line_item' );
 			$ids   = array_column( $items, 'product_id' );
 
-			// Get Fee names
+			// Get Fee names!
 			$fees      = $order->get_fees();
 			$fee_names = array_column( $fees, 'name' );
 		}
 
 		$incoming_items = $transaction['items'];
 		foreach ( $incoming_items as $incoming_item ) {
-			// Skip reserved SKUs
+			// Skip reserved SKUs!
 			if ( in_array( strtolower( $incoming_item['artno'] ), array(
 				'shipping',
 				'discount'
@@ -402,19 +409,19 @@ abstract class WC_Gateway_Mondido_Abstract extends WC_Payment_Gateway {
 				continue;
 			}
 
-			// Extract Product Id
+			// Extract Product Id!
 			if ( preg_match( '#^product_id#', $incoming_item['artno'] ) ) {
 				$product_id = str_replace( 'product_id', '', $incoming_item['artno'] );
 			} else {
 				$product_id = wc_get_product_id_by_sku( $incoming_item['artno'] );
 			}
 
-			// Skip products which present in order
+			// Skip products which present in order!
 			if ( $product_id && in_array( $product_id, $ids ) ) {
 				continue;
 			}
 
-			// Skip product if fee already applied
+			// Skip product if fee already applied!
 			if ( in_array(
 				strtolower( $incoming_item['description'] ),
 				array_map( 'mb_strtolower', $fee_names ) )
@@ -422,17 +429,17 @@ abstract class WC_Gateway_Mondido_Abstract extends WC_Payment_Gateway {
 				continue;
 			}
 
-			// There are can be products by Mondido like Invoice fee, discounts etc
-			// Apple fee
+			// There are can be products by Mondido like Invoice fee, discounts etc!
+			// Apple fee!
 			$amount = (float) $incoming_item['amount'];
 			//$tax    = (float) $incoming_item['vat'];
 			$tax = 0;
 
-			// Calculate taxes
+			// Calculate taxes!
 			$taxable   = $this->tax_status === 'taxable';
 			$tax_class = $this->tax_class;
 			if ( $taxable ) {
-				// Mondido prices include tax
+				// Mondido prices include tax!
 				$tax = $this->get_tax_total( $amount, $tax_class, true );
 				$amount -= $tax;
 			}
@@ -447,10 +454,10 @@ abstract class WC_Gateway_Mondido_Abstract extends WC_Payment_Gateway {
 			$this->add_order_fee($fee, $order);
 		}
 
-		// Calculate totals
+		// Calculate totals!
 		$order->calculate_totals();
 
-		// Force to set total
+		// Force to set total!
 		$order->set_total( $transaction['amount'] );
 	}
 
@@ -475,12 +482,12 @@ abstract class WC_Gateway_Mondido_Abstract extends WC_Payment_Gateway {
 	 * @param  float  $amount
 	 * @param  string $reason
 	 *
-	 * @return  bool|wp_error True or false based on success, or a WP_Error object
+	 * @return  bool|wp_error true or false based on success, or a WP_Error object
 	 */
 	public function process_refund( $order_id, $amount = NULL, $reason = '' ) {
 		$order = wc_get_order( $order_id );
 		if ( ! $order ) {
-			return FALSE;
+			return false;
 		}
 
 		$transaction_id = $order->get_transaction_id();
@@ -493,7 +500,7 @@ abstract class WC_Gateway_Mondido_Abstract extends WC_Payment_Gateway {
 			'body'    => array(
 				'transaction_id' => $transaction_id,
 				'amount'         => number_format( $amount, 2, '.', '' ),
-				'reason'         => $reason
+				'reason'         => $reason,
 			)
 		) );
 
@@ -501,14 +508,14 @@ abstract class WC_Gateway_Mondido_Abstract extends WC_Payment_Gateway {
 			return $result;
 		}
 
-		$transaction = json_decode( $result['body'], TRUE );
+		$transaction = json_decode( $result['body'], true );
 		if ( ! isset( $transaction['id'] ) && isset( $transaction['description'] ) ) {
 			return new WP_Error( 'refund', sprintf( __( 'Error: %s', 'woocommerce-gateway-mondido' ), $transaction['description'] ) );
 		}
 
 		$order->add_order_note( sprintf( __( 'Refunded: %s. Transaction ID: %s. Reason: %s', 'woocommerce-gateway-mondido' ), wc_price( $amount ), $transaction['id'], $reason ) );
 
-		return TRUE;
+		return true;
 	}
 
 	/**
@@ -523,17 +530,17 @@ abstract class WC_Gateway_Mondido_Abstract extends WC_Payment_Gateway {
 		$transaction_id = $transaction_data['id'];
 		$status = $transaction_data['status'];
 
-		// Clean order data cache
+		// Clean order data cache!
 		clean_post_cache( $order_id );
 
-		// Check transaction was processed
+		// Check transaction was processed!
 		$current_transaction_id = $order->get_transaction_id();
 		$current_status = get_post_meta( $order_id, '_mondido_transaction_status', true );
 		if ( $current_transaction_id === $transaction_id && $current_status === $status ) {
 			throw new \Exception( "Transaction already applied. Order ID: {$order_id}. Transaction ID: {$transaction_id}. Transaction status: {$status}" );
 		}
 
-		// Save Transaction
+		// Save Transaction!
 		delete_post_meta( $order_id, '_transaction_id' );
 		update_post_meta( $order_id, '_transaction_id', $transaction_id );
 
@@ -568,7 +575,7 @@ abstract class WC_Gateway_Mondido_Abstract extends WC_Payment_Gateway {
 				break;
 		}
 
-        // Extract address
+        // Extract address!
         $address = array();
         if ( isset( $transaction_data['payment_details'] ) && ! empty( $transaction_data['payment_details']['country_code'] ) ) {
             $details = $transaction_data['payment_details'];
@@ -584,13 +591,13 @@ abstract class WC_Gateway_Mondido_Abstract extends WC_Payment_Gateway {
                 'city'       => $details['city'],
                 'state'      => '',
                 'postcode'   => $details['zip'],
-                'country'    => $country['alpha2']
+                'country'    => $country['alpha2'],
             );
             update_post_meta( $order_id, '_mondido_invoice_address', $address );
         }
 
-        // Define address for Mondido Checkout
-        if ( (bool) get_post_meta( $order_id, '_mondido_checkout', TRUE ) ) {
+        // Define address for Mondido Checkout!
+        if ( (bool) get_post_meta( $order_id, '_mondido_checkout', true ) ) {
             $order->set_address( $address, 'billing' );
 
             if ( $order->needs_shipping_address() ) {
@@ -600,8 +607,8 @@ abstract class WC_Gateway_Mondido_Abstract extends WC_Payment_Gateway {
 
 		switch ( $transaction_data['transaction_type'] ) {
 			case 'invoice':
-				// Save invoice address
-				// Format address
+				// Save invoice address!
+				// Format address!
 				$formatted = '';
 				$fields    = WC()->countries->get_default_address_fields();
 				foreach ( $address as $key => $value ) {
@@ -613,11 +620,11 @@ abstract class WC_Gateway_Mondido_Abstract extends WC_Payment_Gateway {
 
 				$order->add_order_note( sprintf( __( 'Invoice Address: %s', 'woocommerce-gateway-mondido' ), "\n" . $formatted ) );
 
-				// Override shipping address
+				// Override shipping address!
 				$order->set_address( $address, 'shipping' );
 				break;
 			default:
-				//
+
 		}
 	}
 
@@ -632,7 +639,7 @@ abstract class WC_Gateway_Mondido_Abstract extends WC_Payment_Gateway {
 	public function get_tax_total( $cost, $tax_class, $price_incl_tax = false ) {
 		$_tax  = new WC_Tax();
 
-		// Get tax rates
+		// Get tax rates!
 		$tax_rates    = $_tax->get_rates( $tax_class );
 		$add_on_taxes = $_tax->calc_tax( $cost, $tax_rates, $price_incl_tax );
 
@@ -698,7 +705,7 @@ abstract class WC_Gateway_Mondido_Abstract extends WC_Payment_Gateway {
 				$result = $wpdb->insert($wpdb->prefix . 'mondido_customers', array(
 					'customer_reference' => $customer_reference,
 					'user_id'            => $user_id,
-					'email'              => $email
+					'email'              => $email,
 				));
 				$attempts++;
 				if ($attempts >= 5) {
@@ -744,7 +751,7 @@ abstract class WC_Gateway_Mondido_Abstract extends WC_Payment_Gateway {
 			)
 		) );
 
-		$result = json_decode( $result['body'], TRUE );
+		$result = json_decode( $result['body'], true );
 		if (isset($result[0])) {
 			return $result[0]['id'];
 		}
@@ -770,7 +777,7 @@ abstract class WC_Gateway_Mondido_Abstract extends WC_Payment_Gateway {
 			throw new Exception( 'Failed to get subscriptions' );
 		}
 
-		$subscriptions = json_decode( $result['body'], TRUE );
+		$subscriptions = json_decode( $result['body'], true );
 		if (isset($subscriptions['name']) && $subscriptions['name'] === 'errors.customer.not_found') {
 			throw new Exception( 'Customer not found' );
 		}
@@ -792,7 +799,7 @@ abstract class WC_Gateway_Mondido_Abstract extends WC_Payment_Gateway {
 				'Authorization' => 'Basic ' . base64_encode( "{$this->merchant_id}:{$this->password}" )
 			),
 			'body'    => array(
-				'status' => 'cancelled'
+				'status' => 'cancelled',
 			)
 		) );
 
@@ -800,6 +807,6 @@ abstract class WC_Gateway_Mondido_Abstract extends WC_Payment_Gateway {
 			throw new Exception( 'Failed to cancel subscription' );
 		}
 
-		return json_decode( $result['body'], TRUE );
+		return json_decode( $result['body'], true );
 	}
 }

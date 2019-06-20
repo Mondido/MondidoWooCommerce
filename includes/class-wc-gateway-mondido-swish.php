@@ -20,10 +20,10 @@ class WC_Gateway_Mondido_Swish extends WC_Gateway_Mondido_HW {
 			'refunds',
 		);
 
-		// Load the form fields.
+		// Load the form fields!
 		$this->init_form_fields();
 
-		// Load the settings.
+		// Load the settings!
 		$this->init_settings();
 
 		// Define variables
@@ -40,37 +40,23 @@ class WC_Gateway_Mondido_Swish extends WC_Gateway_Mondido_HW {
 		$this->logos             = isset( $this->settings['logos'] ) ? $this->settings['logos'] : array();
 		$this->order_button_text = isset( $this->settings['order_button_text'] ) ? $this->settings['order_button_text'] : __( 'Pay with Swish', 'woocommerce-gateway-mondido' );
 
-		add_filter( 'woocommerce_mondido_form_fields', array(
-			$this,
-			'set_payment_method'
-		), 10, 3 );
+		add_filter( 'woocommerce_mondido_form_fields', array( $this, 'set_payment_method',), 10, 3 );
 
-		// Actions
-		add_action( 'woocommerce_update_options_payment_gateways_' . $this->id, array(
-			$this,
-			'process_admin_options'
-		) );
+		// Actions!
+		add_action( 'woocommerce_update_options_payment_gateways_' . $this->id, array( $this, 'process_admin_options' ) );
 
-		add_action( 'woocommerce_thankyou_' . $this->id, array(
-			$this,
-			'thankyou_page'
-		) );
+		add_action( 'woocommerce_thankyou_' . $this->id, array( $this, 'thankyou_page' ) );
 
-		// Payment listener/API hook
-		add_action( 'woocommerce_api_wc_gateway_' . $this->id, array(
-			$this,
-			'notification_callback'
-		) );
+		// Payment listener/API hook!
+		add_action( 'woocommerce_api_wc_gateway_' . $this->id, array( $this, 'notification_callback' ) );
 
-		// Receipt hook
-		add_action( 'woocommerce_receipt_' . $this->id, array(
-			$this,
-			'receipt_page'
-		) );
+		// Receipt hook!
+		add_action( 'woocommerce_receipt_' . $this->id, array( $this, 'receipt_page' ) );
 	}
 
 	/**
 	 * Initialise Settings Form Fields
+     *
 	 * @return void
 	 */
 	public function init_form_fields() {
@@ -79,13 +65,13 @@ class WC_Gateway_Mondido_Swish extends WC_Gateway_Mondido_HW {
 				'title'   => __( 'Enable/Disable', 'woocommerce-gateway-mondido' ),
 				'type'    => 'checkbox',
 				'label'   => __( 'Enable Mondido Swish', 'woocommerce-gateway-mondido' ),
-				'default' => 'no'
+				'default' => 'no',
 			),
 			'title'             => array(
 				'title'       => __( 'Title', 'woocommerce-gateway-mondido' ),
 				'type'        => 'text',
 				'description' => __( 'This controls the title which the user sees during checkout.', 'woocommerce-gateway-mondido' ),
-				'default'     => __( 'Swish', 'woocommerce-gateway-mondido' )
+				'default'     => __( 'Swish', 'woocommerce-gateway-mondido' ),
 			),
 			'description'       => array(
 				'title'       => __( 'Description', 'woocommerce-gateway-mondido' ),
@@ -97,48 +83,48 @@ class WC_Gateway_Mondido_Swish extends WC_Gateway_Mondido_HW {
 				'title'       => __( 'Merchant ID', 'woocommerce-gateway-mondido' ),
 				'type'        => 'text',
 				'description' => __( 'Merchant ID for Mondido', 'woocommerce-gateway-mondido' ),
-				'default'     => ''
+				'default'     => '',
 			),
 			'secret'            => array(
 				'title'       => __( 'Secret', 'woocommerce-gateway-mondido' ),
 				'type'        => 'password',
 				'description' => __( 'Given secret code from Mondido', 'woocommerce-gateway-mondido' ),
-				'default'     => ''
+				'default'     => '',
 			),
 			'password'          => array(
 				'title'       => __( 'API Password', 'woocommerce-gateway-mondido' ),
 				'type'        => 'text',
 				'description' => __( 'API Password from Mondido', 'woocommerce-gateway-mondido' ) . ' (<a href="https://admin.mondido.com/settings">https://admin.mondido.com/settings</a>)',
-				'default'     => ''
+				'default'     => '',
 			),
 			'testmode'          => array(
 				'title'   => __( 'Test Mode', 'woocommerce-gateway-mondido' ),
 				'type'    => 'checkbox',
 				'label'   => __( 'Set in testmode', 'woocommerce-gateway-mondido' ),
-				'default' => 'no'
+				'default' => 'no',
 			),
 			'authorize'         => array(
 				'title'   => __( 'Authorize', 'woocommerce-gateway-mondido' ),
 				'type'    => 'checkbox',
 				'label'   => __( 'Reserve money, do not auto-capture', 'woocommerce-gateway-mondido' ),
-				'default' => 'no'
+				'default' => 'no',
 			),
 			'tax_status'        => array(
 				'title'       => __( 'Tax status for payment fees', 'woocommerce-gateway-mondido' ),
 				'type'        => 'select',
 				'options'     => array(
 					'none'    => __( 'None', 'woocommerce-gateway-mondido' ),
-					'taxable' => __( 'Taxable', 'woocommerce-gateway-mondido' )
+					'taxable' => __( 'Taxable', 'woocommerce-gateway-mondido' ),
 				),
 				'description' => __( 'If any payment fee should be taxable', 'woocommerce-gateway-mondido' ),
-				'default'     => 'none'
+				'default'     => 'none',
 			),
 			'tax_class'         => array(
 				'title'       => __( 'Tax class for payment fees', 'woocommerce-gateway-mondido' ),
 				'type'        => 'select',
 				'options'     => self::getTaxClasses(),
 				'description' => __( 'If you have a fee for invoice payments, what tax class should be applied to that fee', 'woocommerce-gateway-mondido' ),
-				'default'     => 'standard'
+				'default'     => 'standard',
 			),
 			'order_button_text' => array(
 				'title'   => __( 'Text for "Place Order" button', 'woocommerce-gateway-mondido' ),
@@ -150,6 +136,7 @@ class WC_Gateway_Mondido_Swish extends WC_Gateway_Mondido_HW {
 
 	/**
 	 * Output the gateway settings screen
+     *
 	 * @return void
 	 */
 	public function admin_options() {
@@ -179,5 +166,5 @@ class WC_Gateway_Mondido_Swish extends WC_Gateway_Mondido_HW {
 	}
 }
 
-// Register Gateway
+// Register Gateway!
 WC_Mondido_Payments::register_gateway( 'WC_Gateway_Mondido_Swish' );
