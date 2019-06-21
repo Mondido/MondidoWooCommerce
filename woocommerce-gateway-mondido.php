@@ -186,3 +186,22 @@ CREATE TABLE IF NOT EXISTS `{$wpdb->prefix}mondido_customers` (
 }
 
 new WC_Mondido_Payments();
+
+/**
+ * Replace refund text
+ *
+ * @param $translated
+ * @param $text
+ * @param $domain
+ * @return mixed
+ */
+
+function woocommerce_refuse_replace_text($translated, $text, $domain ) {
+
+// Replace refund text!
+    $translated = str_ireplace( 'Reason for refund (optional):', 'Reason for refund', $translated );
+
+    return $translated;
+}
+
+add_filter( 'gettext', 'woocommerce_refuse_replace_text', 999, 3 );
