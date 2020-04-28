@@ -323,7 +323,18 @@ class WC_Gateway_Mondido_HW extends WC_Gateway_Mondido_Abstract {
 			'store_card'   => $store_card ? 'true' : 'false',
 			'authorize'    => $this->authorize === 'yes' ? 'true' : '',
 			'items'        => $items,
-			'webhook'      => $webhook
+			'webhook'      => $webhook,
+			'payment_details' => [
+				'email' => $metadata['customer']['email'],
+				'phone' => $metadata['customer']['phone'],
+				'first_name' => $metadata['customer']['firstname'],
+				'last_name' => $metadata['customer']['lastname'],
+				'zip' => $metadata['customer']['postcode'],
+				'address_1' => $metadata['customer']['address1'],
+				'address_2' => $metadata['customer']['address2'],
+				'city' => $metadata['customer']['city'],
+				'country_code' => $metadata['customer']['country'],
+			],
 		);
 
 		wc_get_template(
