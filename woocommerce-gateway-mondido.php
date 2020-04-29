@@ -5,7 +5,7 @@
  * Description: Provides a Payment Gateway through Mondido for WooCommerce.
  * Author: Mondido
  * Author URI: https://www.mondido.com/
- * Version: 4.3.1
+ * Version: 4.3.2
  * Text Domain: woocommerce-gateway-mondido
  * Domain Path: /languages
  * WC requires at least: 3.0.0
@@ -93,7 +93,7 @@ CREATE TABLE IF NOT EXISTS `{$wpdb->prefix}mondido_customers` (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8;";
 			$wpdb->query( $query );
 
-			add_option( 'woocommerce_mondido_version', '4.3.1' );
+			add_option( 'woocommerce_mondido_version', '4.3.2' );
 		}
     }
 

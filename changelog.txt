@@ -1,4 +1,7 @@
 *** WooCommerce Mondido Payments Gateway Changelog ***
+2020-04-29 - version 4.3.2
+* Add payment_details on transaction
+
 2018-07-04 - version 4.3.1
 * Fixes for customer reference
 
