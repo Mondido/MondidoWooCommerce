@@ -572,7 +572,6 @@ abstract class WC_Gateway_Mondido_Abstract extends WC_Payment_Gateway {
         $address = array();
         if ( isset( $transaction_data['payment_details'] ) && ! empty( $transaction_data['payment_details']['country_code'] ) ) {
             $details = $transaction_data['payment_details'];
-            $country = (new League\ISO3166\ISO3166)->alpha3( $details['country_code'] );
             $address = array(
                 'first_name' => $details['first_name'],
                 'last_name'  => $details['last_name'],
@@ -584,7 +583,7 @@ abstract class WC_Gateway_Mondido_Abstract extends WC_Payment_Gateway {
                 'city'       => $details['city'],
                 'state'      => '',
                 'postcode'   => $details['zip'],
-                'country'    => $country['alpha2']
+                'country'    => $this->get_country_alpha2( $details['country_code'] ),
             );
             update_post_meta( $order_id, '_mondido_invoice_address', $address );
         }
@@ -801,5 +800,17 @@ abstract class WC_Gateway_Mondido_Abstract extends WC_Payment_Gateway {
 		}
 
 		return json_decode( $result['body'], TRUE );
+	}
+
+	private function get_country_alpha2($code)
+	{
+		$map = new League\ISO3166\ISO3166();
+		try {
+			$country = $map->alpha2($code);
+			return $country['alpha2'];
+		} catch (\Exception $error) {
+			$country = $map->alpha3($code);
+			return $country['alpha2'];
+		}
 	}
 }
