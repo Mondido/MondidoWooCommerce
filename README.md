@@ -1,6 +1,6 @@
 Mondido Payments 
 =======================
-WooCommerce plugin v4.3.2
+WooCommerce plugin v4.3.3
 
 FAQ: https://github.com/Mondido/WooCommerce/wiki/FAQ   
 

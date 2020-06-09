@@ -3,7 +3,7 @@ Contributors: robertpohl, olegisk
 Tags: payment, e-commerce, commerce, woothemes, wordpress ecommerce, mondido, payment gateway
 Requires at least: 4.6
 Tested up to: 4.7
-Stable tag: v4.3.2
+Stable tag: v4.3.3
 License: GPLv3 or later
 License URI: https://www.gnu.org/licenses/gpl-3.0.html
 
