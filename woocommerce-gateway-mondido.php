@@ -123,12 +123,20 @@ CREATE TABLE IF NOT EXISTS `{$wpdb->prefix}mondido_customers` (
 	public function woocommerce_loaded() {
 		// Includes
 		include_once( dirname( __FILE__ ) . '/includes/abstracts/class-wc-gateway-mondido-abstract.php' );
+		include_once( dirname( __FILE__ ) . '/includes/class-wc-gateway-mondido-hw.php' );
+
 		include_once( dirname( __FILE__ ) . '/includes/class-wc-gateway-mondido-swish.php' );
 		include_once( dirname( __FILE__ ) . '/includes/class-wc-gateway-mondido-bank.php' );
-		include_once( dirname( __FILE__ ) . '/includes/class-wc-gateway-mondido-hw.php' );
 		include_once( dirname( __FILE__ ) . '/includes/class-wc-gateway-mondido-paypal.php' );
 		include_once( dirname( __FILE__ ) . '/includes/class-wc-gateway-mondido-invoice.php' );
 		include_once( dirname( __FILE__ ) . '/includes/class-wc-payment-token-mondido.php' );
+
+
+		WC_Mondido_Payments::register_gateway( 'WC_Gateway_Mondido_Swish' );
+		WC_Mondido_Payments::register_gateway( 'WC_Gateway_Mondido_Bank' );
+		WC_Mondido_Payments::register_gateway( 'WC_Gateway_Mondido_HW' );
+		WC_Mondido_Payments::register_gateway( 'WC_Gateway_Mondido_PayPal' );
+		WC_Mondido_Payments::register_gateway( 'WC_Gateway_Mondido_Invoice' );
 	}
 
 	/**

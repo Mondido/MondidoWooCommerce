@@ -178,6 +178,3 @@ class WC_Gateway_Mondido_PayPal extends WC_Gateway_Mondido_HW {
 		return $fields;
 	}
 }
-
-// Register Gateway
-WC_Mondido_Payments::register_gateway( 'WC_Gateway_Mondido_PayPal' );
