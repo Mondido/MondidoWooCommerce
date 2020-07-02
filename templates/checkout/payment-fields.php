@@ -9,10 +9,10 @@ if ( ! defined( 'ABSPATH' ) ) {
 	<?php echo wpautop( wptexturize( $description ) ); ?>
 <?php endif; ?>
 
-<?php $gateway->logos = array_filter($gateway->logos, 'strlen'); ?>
-<?php if ( count( $gateway->logos ) > 0 ): ?>
+<?php $logos = $gateway->get_active_payment_logos(); ?>
+<?php if ( count( $logos ) > 0 ): ?>
     <ul class="mondido-logos">
-		<?php foreach ( $gateway->logos as $logo ): ?>
+		<?php foreach ( $logos as $logo ): ?>
             <li class="mondido-logo">
 				<?php
 				$image_url = plugins_url( '/assets/images/' . $logo . '.png', dirname( __FILE__ ) . '/../../../' );
