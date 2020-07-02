@@ -690,4 +690,20 @@ class WC_Gateway_Mondido_HW extends WC_Gateway_Mondido_Abstract {
 
 		return $fields;
 	}
+
+	public function get_active_payment_logos() {
+		if (empty($this->form_fields['logos'])) {
+			return array();
+		}
+		
+		$active_logos = array();
+		
+		foreach (array_keys($this->form_fields['logos']['options']) as $logo) {
+			if (in_array($logo, $this->logos, true)) {
+				$active_logos[] = $logo;
+			}
+		}
+		
+		return $active_logos;
+	}
 }
