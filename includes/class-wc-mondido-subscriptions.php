@@ -45,6 +45,7 @@ class WC_Mondido_Subscriptions {
 	public static function subscription_options_product_tab_content() {
 		global $post;
 		$plan_id = get_post_meta( get_the_ID(), '_mondido_plan_id', TRUE );
+		$include = get_post_meta( get_the_ID(), '_mondido_plan_include', TRUE );
 		$gateway = new WC_Gateway_Mondido_HW();
 		?>
 		<div id='subscription_options' class='panel woocommerce_options_panel'>
@@ -66,6 +67,13 @@ class WC_Mondido_Subscriptions {
 							'value'   => (string) $plan_id,
 							'label'   => __( 'Subscription plan', 'woocommerce-gateway-mondido' ),
 							'options' => $options
+						)
+					);
+					woocommerce_wp_checkbox(
+						array(
+							'id'          => '_mondido_plan_include',
+							'description' => __( 'Add product to the recurring payments', 'woocommerce-gateway-mondido' ),
+							'value'   => (string) $include,
 						)
 					);
 				} catch (Exception $e) {
@@ -98,6 +106,7 @@ class WC_Mondido_Subscriptions {
 
 		if ( isset( $_POST['_mondido_plan_id'] ) ) {
 			update_post_meta( $post_id, '_mondido_plan_id', $_POST['_mondido_plan_id'] );
+			update_post_meta( $post_id, '_mondido_plan_include', $_POST['_mondido_plan_include'] );
 		}
 	}
 
