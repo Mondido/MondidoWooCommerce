@@ -172,12 +172,29 @@ class WC_Mondido_Subscriptions {
 		if ( ! $order ) {
 			return $fields;
 		}
+        $is_wc3 = version_compare(WC()->version, '3.0', '>=');
 
 		foreach ( $order->get_items( 'line_item' ) as $order_item ) {
-			if ( version_compare( WC()->version, '3.0', '>=' ) ) {
-				$plan_id = get_post_meta( $order_item->get_product_id(), '_mondido_plan_id', TRUE );
-			} else {
-				$plan_id = get_post_meta( $order_item['product_id'], '_mondido_plan_id', TRUE );
+			$product_id = $is_wc3 ? $order_item->get_product_id() : $order_item['product_id'];
+			$plan_id = get_post_meta( $product_id, '_mondido_plan_id', TRUE );
+			$include_product = get_post_meta( $product_id, '_mondido_plan_include', TRUE );
+
+			if ($plan_id && $include_product) {
+				$product      = wc_get_product( $product_id );
+				$sku          = $product->get_sku();
+				$price        = $order->get_line_subtotal( $order_item, FALSE, FALSE );
+				$priceWithTax = $order->get_line_subtotal( $order_item, TRUE, FALSE );
+				$tax          = $priceWithTax - $price;
+				$taxPercent   = ( $tax > 0 ) ? round( 100 / ( $price / $tax ) ) : 0;
+
+				$fields['subscription_items'][] = array(
+					'artno'       => empty( $sku ) ? 'product_id' . $product->get_id() : $sku,
+					'description' => $is_wc3 ? $order_item->get_name() : $order_item['name'],
+					'amount'      => number_format( $priceWithTax, 2, '.', '' ),
+					'qty'         => $is_wc3 ? $order_item->get_quantity() : $order_item['qty'],
+					'vat'         => number_format( $taxPercent, 2, '.', '' ),
+					'discount'    => 0
+				);
 			}
 
 			if ( (int) $plan_id > 0 ) {
