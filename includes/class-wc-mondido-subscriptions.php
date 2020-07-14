@@ -45,6 +45,7 @@ class WC_Mondido_Subscriptions {
 	public static function subscription_options_product_tab_content() {
 		global $post;
 		$plan_id = get_post_meta( get_the_ID(), '_mondido_plan_id', TRUE );
+		$include = get_post_meta( get_the_ID(), '_mondido_plan_include', TRUE );
 		$gateway = new WC_Gateway_Mondido_HW();
 		?>
 		<div id='subscription_options' class='panel woocommerce_options_panel'>
@@ -66,6 +67,13 @@ class WC_Mondido_Subscriptions {
 							'value'   => (string) $plan_id,
 							'label'   => __( 'Subscription plan', 'woocommerce-gateway-mondido' ),
 							'options' => $options
+						)
+					);
+					woocommerce_wp_checkbox(
+						array(
+							'id'          => '_mondido_plan_include',
+							'description' => __( 'Add product to the recurring payments', 'woocommerce-gateway-mondido' ),
+							'value'   => (string) $include,
 						)
 					);
 				} catch (Exception $e) {
@@ -98,6 +106,7 @@ class WC_Mondido_Subscriptions {
 
 		if ( isset( $_POST['_mondido_plan_id'] ) ) {
 			update_post_meta( $post_id, '_mondido_plan_id', $_POST['_mondido_plan_id'] );
+			update_post_meta( $post_id, '_mondido_plan_include', $_POST['_mondido_plan_include'] );
 		}
 	}
 
@@ -163,12 +172,29 @@ class WC_Mondido_Subscriptions {
 		if ( ! $order ) {
 			return $fields;
 		}
+        $is_wc3 = version_compare(WC()->version, '3.0', '>=');
 
 		foreach ( $order->get_items( 'line_item' ) as $order_item ) {
-			if ( version_compare( WC()->version, '3.0', '>=' ) ) {
-				$plan_id = get_post_meta( $order_item->get_product_id(), '_mondido_plan_id', TRUE );
-			} else {
-				$plan_id = get_post_meta( $order_item['product_id'], '_mondido_plan_id', TRUE );
+			$product_id = $is_wc3 ? $order_item->get_product_id() : $order_item['product_id'];
+			$plan_id = get_post_meta( $product_id, '_mondido_plan_id', TRUE );
+			$include_product = get_post_meta( $product_id, '_mondido_plan_include', TRUE );
+
+			if ($plan_id && $include_product) {
+				$product      = wc_get_product( $product_id );
+				$sku          = $product->get_sku();
+				$price        = $order->get_line_subtotal( $order_item, FALSE, FALSE );
+				$priceWithTax = $order->get_line_subtotal( $order_item, TRUE, FALSE );
+				$tax          = $priceWithTax - $price;
+				$taxPercent   = ( $tax > 0 ) ? round( 100 / ( $price / $tax ) ) : 0;
+
+				$fields['subscription_items'][] = array(
+					'artno'       => empty( $sku ) ? 'product_id' . $product->get_id() : $sku,
+					'description' => $is_wc3 ? $order_item->get_name() : $order_item['name'],
+					'amount'      => number_format( $priceWithTax, 2, '.', '' ),
+					'qty'         => $is_wc3 ? $order_item->get_quantity() : $order_item['qty'],
+					'vat'         => number_format( $taxPercent, 2, '.', '' ),
+					'discount'    => 0
+				);
 			}
 
 			if ( (int) $plan_id > 0 ) {
