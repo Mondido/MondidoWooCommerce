@@ -589,9 +589,8 @@ class WC_Gateway_Mondido_HW extends WC_Gateway_Mondido_Abstract {
 						}
 					}
 
-					unset($transaction_data['items'][$subscription_index]);
-
 					if ($subscription_index !== null) {
+						unset($transaction_data['items'][$subscription_index]);
 						$fee            = new stdClass();
 						$fee->name      = sprintf( __( 'Subscription #%s ', 'woocommerce-gateway-mondido' ), $transaction_data['subscription']['id'] );
 						$fee->amount    = $subscription_item['amount'];
@@ -599,7 +598,7 @@ class WC_Gateway_Mondido_HW extends WC_Gateway_Mondido_Abstract {
 						$fee->tax_class = '';
 						$fee->tax       = 0;
 						$fee->tax_data  = array();
-						$this->add_order_fee($fee, $order);
+						$this->add_order_fee($fee, $order, $subscription_item['qty']);
 					}
 
 					// Calculate totals
