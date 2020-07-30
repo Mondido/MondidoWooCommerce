@@ -591,7 +591,7 @@ class WC_Gateway_Mondido_HW extends WC_Gateway_Mondido_Abstract {
 
 					unset($transaction_data['items'][$subscription_index]);
 
-					if ($subscription_index) {
+					if ($subscription_index !== null) {
 						$fee            = new stdClass();
 						$fee->name      = sprintf( __( 'Subscription #%s ', 'woocommerce-gateway-mondido' ), $transaction_data['subscription']['id'] );
 						$fee->amount    = $subscription_item['amount'];

@@ -414,6 +414,33 @@ abstract class WC_Gateway_Mondido_Abstract extends WC_Payment_Gateway {
 				continue;
 			}
 
+			if ($product_id) {
+				$product = wc_get_product($product_id);
+
+				$amount = (float) $incoming_item['amount'];
+				$vat = \WC_Tax::calc_tax($amount, [['rate' => (float) $incoming_item['vat'], 'label' => 'Tax', 'shipping' => 'yes', 'compound' => 'no']], true);
+				$vat = $vat[0];
+
+				if ($product) {
+					$order->add_product($product, $incoming_item['qty'], [
+						'subtotal' => $amount - $vat,
+						'subtotal_tax' => $vat,
+						'total' => $amount - $vat,
+						'total_tax' => $vat,
+					]);
+				} else {
+					$order->add_product(null, $incoming_item['qty'], [
+						'name'         => $incoming_item['description'],
+						'tax_class'    => $this->tax_class,
+						'product_id'   => $product_id,
+						'subtotal' => $amount - $vat,
+						'total' => $amount - $vat,
+						'total_tax' => $vat,
+					]);
+				}
+				continue;
+			}
+
 			// Skip product if fee already applied
 			if ( in_array(
 				strtolower( $incoming_item['description'] ),
