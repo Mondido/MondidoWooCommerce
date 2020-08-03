@@ -174,12 +174,33 @@ class WC_Mondido_Subscriptions {
 		}
         $is_wc3 = version_compare(WC()->version, '3.0', '>=');
 
+        $plan_id = null;
+        $quantity = 0;
+        $items = [];
+
 		foreach ( $order->get_items( 'line_item' ) as $order_item ) {
 			$product_id = $is_wc3 ? $order_item->get_product_id() : $order_item['product_id'];
-			$plan_id = get_post_meta( $product_id, '_mondido_plan_id', TRUE );
-			$include_product = get_post_meta( $product_id, '_mondido_plan_include', TRUE );
+			$product_plan_id = get_post_meta( $product_id, '_mondido_plan_id', TRUE );
 
-			if ($plan_id && $include_product) {
+			if (empty($product_plan_id)) {
+				continue;
+			}
+
+			if ($plan_id === null) {
+				$plan_id = $product_plan_id;
+			}
+
+			if ($product_plan_id !== $plan_id) {
+				wc_add_notice(__(
+					'Order with multiple subscription plans is not supported',
+					'whitelabelmodulenamespace'
+				), 'error');
+				return wp_redirect(wc_get_cart_url());
+			}
+
+			$quantity += (int) ($is_wc3 ? $order_item->get_quantity() : $order_item['qty']);
+
+			if (get_post_meta( $product_id, '_mondido_plan_include', TRUE )) {
 				$product      = wc_get_product( $product_id );
 				$sku          = $product->get_sku();
 				$price        = $order->get_line_subtotal( $order_item, FALSE, FALSE );
@@ -187,7 +208,7 @@ class WC_Mondido_Subscriptions {
 				$tax          = $priceWithTax - $price;
 				$taxPercent   = ( $tax > 0 ) ? round( 100 / ( $price / $tax ) ) : 0;
 
-				$fields['subscription_items'][] = array(
+				$items[] = array(
 					'artno'       => empty( $sku ) ? 'product_id' . $product->get_id() : $sku,
 					'description' => $is_wc3 ? $order_item->get_name() : $order_item['name'],
 					'amount'      => number_format( $priceWithTax, 2, '.', '' ),
@@ -196,14 +217,13 @@ class WC_Mondido_Subscriptions {
 					'discount'    => 0
 				);
 			}
-
-			if ( (int) $plan_id > 0 ) {
-				$fields['plan_id']               = $plan_id;
-				$fields['subscription_quantity'] = $order_item['qty'];
-
-				return $fields;
-			}
 		}
+
+        if ($plan_id !== null) {
+            $fields['plan_id']               = $plan_id;
+            $fields['subscription_quantity'] = $quantity;
+            $fields['subscription_items'] = $items;
+        }
 
 		return $fields;
 	}

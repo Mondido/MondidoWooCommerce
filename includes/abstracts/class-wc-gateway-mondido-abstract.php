@@ -203,26 +203,27 @@ abstract class WC_Gateway_Mondido_Abstract extends WC_Payment_Gateway {
 	 *
 	 * @return int
 	 */
-	public function add_order_fee($fee, &$order) {
-		if ($this->is_wc3()) {
-			$item = new WC_Order_Item_Fee();
-			$item->set_props( array(
-				'name'      => $fee->name,
-				'tax_class' => $fee->taxable ? $fee->tax_class : 0,
-				'total'     => $fee->amount,
-				'total_tax' => $fee->tax,
-				'taxes'     => array(
-					'total' => $fee->tax_data,
-				),
-				'order_id'  => $order->get_id(),
-			) );
-			$item->save();
+	public function add_order_fee($fee, &$order, $qty = 1) {
+		for ($count = 0; $count < $qty; $count++) {
+			if ($this->is_wc3()) {
+				$item = new WC_Order_Item_Fee();
+				$item->set_props( array(
+					'name'      => $fee->name,
+					'tax_class' => $fee->taxable ? $fee->tax_class : 0,
+					'total'     => $fee->amount,
+					'total_tax' => $fee->tax,
+					'taxes'     => array(
+						'total' => $fee->tax_data,
+					),
+					'order_id'  => $order->get_id(),
+				) );
+				$item->save();
 
-			$order->add_item( $item );
-			return $item->get_id();
+				$order->add_item( $item );
+			} else {
+				$order->add_fee( $fee );
+			}
 		}
-
-		return $order->add_fee( $fee );
 	}
 
 	/**
@@ -411,6 +412,33 @@ abstract class WC_Gateway_Mondido_Abstract extends WC_Payment_Gateway {
 
 			// Skip products which present in order
 			if ( $product_id && in_array( $product_id, $ids ) ) {
+				continue;
+			}
+
+			if ($product_id) {
+				$product = wc_get_product($product_id);
+
+				$amount = (float) $incoming_item['amount'];
+				$vat = \WC_Tax::calc_tax($amount, [['rate' => (float) $incoming_item['vat'], 'label' => 'Tax', 'shipping' => 'yes', 'compound' => 'no']], true);
+				$vat = $vat[0];
+
+				if ($product) {
+					$order->add_product($product, $incoming_item['qty'], [
+						'subtotal' => $amount - $vat,
+						'subtotal_tax' => $vat,
+						'total' => $amount - $vat,
+						'total_tax' => $vat,
+					]);
+				} else {
+					$order->add_product(null, $incoming_item['qty'], [
+						'name'         => $incoming_item['description'],
+						'tax_class'    => $this->tax_class,
+						'product_id'   => $product_id,
+						'subtotal' => $amount - $vat,
+						'total' => $amount - $vat,
+						'total_tax' => $vat,
+					]);
+				}
 				continue;
 			}
 
