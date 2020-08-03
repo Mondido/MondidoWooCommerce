@@ -191,10 +191,11 @@ class WC_Mondido_Subscriptions {
 			}
 
 			if ($product_plan_id !== $plan_id) {
-				throw new \RuntimeException(__(
+				wc_add_notice(__(
 					'Order with multiple subscription plans is not supported',
 					'whitelabelmodulenamespace'
-				));
+				), 'error');
+				return wp_redirect(wc_get_cart_url());
 			}
 
 			$quantity += (int) ($is_wc3 ? $order_item->get_quantity() : $order_item['qty']);
