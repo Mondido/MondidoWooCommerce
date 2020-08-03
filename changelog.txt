@@ -1,7 +1,9 @@
 *** WooCommerce Mondido Payments Gateway Changelog ***
 
-2020-07-02 - version 4.3.4
-* follow the hardcoded order of payment method instead of the one stored in settings
+2020-08-04 - version 4.3.4
+* Follow the hardcoded order of payment method instead of the one stored in settings
+* Allow merchant to add a product to recurring payments
+* Stop the customer from trying to order products with different subscription plans
 
 2020-06-09 - version 4.3.3
 * Change the order of logos to comply with new swedish law
