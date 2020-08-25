@@ -123,20 +123,18 @@ CREATE TABLE IF NOT EXISTS `{$wpdb->prefix}mondido_customers` (
 	public function woocommerce_loaded() {
 		// Includes
 		include_once( dirname( __FILE__ ) . '/includes/abstracts/class-wc-gateway-mondido-abstract.php' );
-		include_once( dirname( __FILE__ ) . '/includes/class-wc-gateway-mondido-hw.php' );
 
-		include_once( dirname( __FILE__ ) . '/includes/class-wc-gateway-mondido-swish.php' );
-		include_once( dirname( __FILE__ ) . '/includes/class-wc-gateway-mondido-bank.php' );
-		include_once( dirname( __FILE__ ) . '/includes/class-wc-gateway-mondido-paypal.php' );
-		include_once( dirname( __FILE__ ) . '/includes/class-wc-gateway-mondido-invoice.php' );
+		include_once( dirname( __FILE__ ) . '/includes/class-wc-gateway-mondido-hw.php' );
+		include_once( dirname( __FILE__ ) . '/includes/class-wc-gateway-mondido-preselect.php' );
+
 		include_once( dirname( __FILE__ ) . '/includes/class-wc-payment-token-mondido.php' );
 
-
-		WC_Mondido_Payments::register_gateway( 'WC_Gateway_Mondido_Swish' );
-		WC_Mondido_Payments::register_gateway( 'WC_Gateway_Mondido_Bank' );
-		WC_Mondido_Payments::register_gateway( 'WC_Gateway_Mondido_HW' );
-		WC_Mondido_Payments::register_gateway( 'WC_Gateway_Mondido_PayPal' );
-		WC_Mondido_Payments::register_gateway( 'WC_Gateway_Mondido_Invoice' );
+		WC_Mondido_Payments::register_preselect_gateway('swish', 'Mondido Swish', 'Pay with Swish');
+		WC_Mondido_Payments::register_preselect_gateway('bank', 'Mondido Direct Bank', 'Pay with Direct Bank');
+		WC_Mondido_Payments::register_gateway( new WC_Gateway_Mondido_HW() );
+		WC_Mondido_Payments::register_preselect_gateway('credit_card', 'Mondido Card', 'Pay with Card');
+		WC_Mondido_Payments::register_preselect_gateway('paypal', 'Mondido PayPal', 'Pay with PayPal');
+		WC_Mondido_Payments::register_preselect_gateway('invoice', 'Mondido Invoice', 'Pay with Mondido');
 	}
 
 	/**
@@ -165,29 +163,36 @@ CREATE TABLE IF NOT EXISTS `{$wpdb->prefix}mondido_customers` (
     }
 
 	/**
+	 * Register preselected payment gateway
+	 *
+	 * @param string $class_name
+	 */
+	private static function register_preselect_gateway( $method, $title, $button_text ) {
+		self::register_gateway(new WC_Gateway_Mondido_Preselect($method, $title, $button_text));
+	}
+
+	/**
 	 * Register payment gateway
 	 *
 	 * @param string $class_name
 	 */
-	public static function register_gateway( $class_name ) {
+	private static function register_gateway( $gateway ) {
 		global $mondido_gateways;
 
 		if ( ! $mondido_gateways ) {
 			$mondido_gateways = array();
 		}
 
-		if ( ! isset( $mondido_gateways[ $class_name ] ) ) {
+		if ( ! isset( $mondido_gateways[ get_class($gateway) ] ) ) {
 			// Initialize instance
-			if ( $gateway = new $class_name ) {
-				$mondido_gateways[] = $class_name;
+			$mondido_gateways[] = $gateway;
 
-				// Register gateway instance
-				add_filter( 'woocommerce_payment_gateways', function ( $methods ) use ( $gateway ) {
-					$methods[] = $gateway;
+			// Register gateway instance
+			add_filter( 'woocommerce_payment_gateways', function ( $methods ) use ( $gateway ) {
+				$methods[] = $gateway;
 
-					return $methods;
-				} );
-			}
+				return $methods;
+			} );
 		}
 	}
 }
