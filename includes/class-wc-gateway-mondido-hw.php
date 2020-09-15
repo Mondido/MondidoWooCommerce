@@ -47,7 +47,7 @@ class WC_Gateway_Mondido_HW extends WC_Gateway_Mondido_Abstract {
 		$this->merchant_id       = isset( $this->settings['merchant_id'] ) ? $this->settings['merchant_id'] : '';
 		$this->secret            = isset( $this->settings['secret'] ) ? $this->settings['secret'] : '';
 		$this->password          = isset( $this->settings['password'] ) ? $this->settings['password'] : '';
-		$this->testmode          = isset( $this->settings['testmode'] ) ? $this->settings['testmode'] : 'no';
+		$this->testmode          = isset( $this->settings['testmode'] ) ? $this->settings['testmode'] : 'yes';
 		$this->authorize         = isset( $this->settings['authorize'] ) ? $this->settings['authorize'] : 'no';
 		$this->tax_status        = isset( $this->settings['tax_status'] ) ? $this->settings['tax_status'] : 'none';
 		$this->tax_class         = isset( $this->settings['tax_class'] ) ? $this->settings['tax_class'] : 'standard';
