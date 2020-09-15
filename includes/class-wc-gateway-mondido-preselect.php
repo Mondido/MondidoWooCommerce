@@ -8,6 +8,7 @@ class WC_Gateway_Mondido_Preselect extends WC_Gateway_Mondido_HW {
 
     private $default_method_title;
     private $default_button_text;
+    private $preselected_method;
 
 	/**
 	 * Init
@@ -17,6 +18,7 @@ class WC_Gateway_Mondido_Preselect extends WC_Gateway_Mondido_HW {
 		$this->has_fields         = TRUE;
 		$this->method_title       = __( "Mondido $method_title", 'woocommerce-gateway-mondido' );
 		$this->method_description = $description;
+        $this->preselected_method = $preselected_method;
 
 		$this->default_method_title = $method_title;
 		$this->default_button_text = $button_text;
