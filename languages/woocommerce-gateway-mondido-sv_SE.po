@@ -144,36 +144,8 @@ msgstr ""
 msgid "Logos on checkout"
 msgstr ""
 
-#: ../includes/class-wc-gateway-mondido-hw.php:173
-msgid "Visa"
-msgstr ""
-
-#: ../includes/class-wc-gateway-mondido-hw.php:174
-msgid "MasterCard"
-msgstr ""
-
-#: ../includes/class-wc-gateway-mondido-hw.php:175
-msgid "American Express"
-msgstr ""
-
-#: ../includes/class-wc-gateway-mondido-hw.php:176
-msgid "Diners Club"
-msgstr ""
-
-#: ../includes/class-wc-gateway-mondido-hw.php:177
-msgid "Direktbank"
-msgstr ""
-
 #: ../includes/class-wc-gateway-mondido-hw.php:178
 msgid "Invoice/PartPayment"
-msgstr ""
-
-#: ../includes/class-wc-gateway-mondido-hw.php:179
-msgid "PayPal"
-msgstr ""
-
-#: ../includes/class-wc-gateway-mondido-hw.php:180
-msgid "MasterPass"
 msgstr ""
 
 #: ../includes/class-wc-gateway-mondido-hw.php:185
@@ -280,10 +252,6 @@ msgstr ""
 msgid "Name"
 msgstr ""
 
-#: ../templates/admin/payment-actions.php:19
-msgid "Card"
-msgstr ""
-
 #: ../templates/admin/payment-actions.php:21
 msgid "Status"
 msgstr ""
@@ -346,3 +314,72 @@ msgstr ""
 #: ../woocommerce-gateway-mondido.php:268
 msgid "Subscription plan"
 msgstr ""
+
+msgid "MasterPass"
+msgstr "MasterPass"
+
+msgid "Direktbank"
+msgstr "Direktbank"
+
+msgid "After Pay"
+msgstr "After Pay"
+
+msgid "American Express"
+msgstr "American Express"
+
+msgid "Bank"
+msgstr "Bank"
+
+msgid "Card"
+msgstr "Kort"
+
+msgid "Diners"
+msgstr "Diners"
+
+msgid "Discover"
+msgstr "Discover"
+
+msgid "E-payment"
+msgstr "E-payment"
+
+msgid "E-Payments"
+msgstr "E-Payments"
+
+msgid "Invoice"
+msgstr "Faktura"
+
+msgid "JCB"
+msgstr "JCB"
+
+msgid "Manual Invoice"
+msgstr "Manuell faktura"
+
+msgid "Mastercard"
+msgstr "Mastercard"
+
+msgid "Mobile Pay"
+msgstr "Mobile Pay"
+
+msgid "Payment"
+msgstr "Betalning"
+
+msgid "PayPal"
+msgstr "PayPal"
+
+msgid "Recurring"
+msgstr "Återkommande"
+
+msgid "Siirto"
+msgstr "Siirto"
+
+msgid "Stored card"
+msgstr "Sparat kort"
+
+msgid "Swish"
+msgstr "Swish"
+
+msgid "Vipps"
+msgstr "Vipps"
+
+msgid "Visa"
+msgstr "Visa"

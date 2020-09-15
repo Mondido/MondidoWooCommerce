@@ -86,6 +86,8 @@ class WC_Gateway_Mondido_HW extends WC_Gateway_Mondido_Abstract {
 			$this,
 			'add_form_hash_value'
 		), 10, 3 );
+
+		add_filter('woocommerce_order_get_payment_method_title', array($this, 'woocommerce_order_get_payment_method_title'), 0, 2);
 	}
 
 	/**
@@ -717,5 +719,14 @@ class WC_Gateway_Mondido_HW extends WC_Gateway_Mondido_Abstract {
 		}
 		
 		return $active_logos;
+	}
+
+	public function woocommerce_order_get_payment_method_title($value, $order)
+	{
+		if ($order->get_payment_method() !== $this->id) {
+			return $value;
+		}
+
+		return $this->get_payment_method_name($value, $order, $this->method_title);
 	}
 }
