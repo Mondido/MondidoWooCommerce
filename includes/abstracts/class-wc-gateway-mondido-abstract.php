@@ -287,6 +287,28 @@ abstract class WC_Gateway_Mondido_Abstract extends WC_Payment_Gateway {
 		return FALSE;
 	}
 
+	public function lookupTransactionByOrderId( $order_id ) {
+		$result = wp_remote_get("https://api.mondido.com/v1/transactions?filter[payment_ref]=$order_id", array(
+			'headers' => array(
+				'Authorization' => 'Basic ' . base64_encode( "{$this->merchant_id}:{$this->password}" )
+			)
+		) );
+
+		if ( is_a( $result, 'WP_Error' ) ) {
+			throw new Exception( implode( $result->errors['http_request_failed'] ) );
+		}
+
+		if ( $result['response']['code'] != 200 ) {
+			throw new Exception( $result['body'] );
+		} else {
+			$data = json_decode( $result['body'], TRUE );
+			if (count($data) === 0) {
+				return null;
+			}
+			return $data[0];
+		}
+	}
+
 	/**
 	 * Capture Transaction
 	 *
@@ -833,6 +855,10 @@ abstract class WC_Gateway_Mondido_Abstract extends WC_Payment_Gateway {
 	public function get_payment_method_name($value, $order, $default_value)
 	{
 		$transaction = get_post_meta( $order->get_id(), '_mondido_transaction_data', TRUE );
+
+		if (!$transaction) {
+			$transaction = $this->lookupTransactionByOrderId($order->get_id());
+		}
 
 		if (!empty($transaction['transaction_type'])) {
 			switch ($transaction['transaction_type']) {
