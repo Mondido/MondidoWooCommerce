@@ -126,7 +126,7 @@ class WC_Gateway_Mondido_Preselect extends WC_Gateway_Mondido_HW {
 				'title'   => __( 'Test Mode', 'woocommerce-gateway-mondido' ),
 				'type'    => 'checkbox',
 				'label'   => __( 'Set in testmode', 'woocommerce-gateway-mondido' ),
-				'default' => 'no'
+				'default' => 'yes'
 			),
 			'authorize'         => array(
 				'title'   => __( 'Authorize', 'woocommerce-gateway-mondido' ),
@@ -195,6 +195,6 @@ class WC_Gateway_Mondido_Preselect extends WC_Gateway_Mondido_HW {
 			return $value;
 		}
 
-		return $this->get_payment_method_name($value, $order, $this->method_title);
+		return $this->get_payment_method_name($value, $order, $this->preselected_method, $this->method_title);
 	}
 }
