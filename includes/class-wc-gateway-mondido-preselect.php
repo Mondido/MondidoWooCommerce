@@ -8,7 +8,6 @@ class WC_Gateway_Mondido_Preselect extends WC_Gateway_Mondido_HW {
 
     private $default_method_title;
     private $default_button_text;
-    private $preselected_method;
 
 	/**
 	 * Init
@@ -54,30 +53,7 @@ class WC_Gateway_Mondido_Preselect extends WC_Gateway_Mondido_HW {
 			'set_payment_method'
 		), 10, 3 );
 
-		add_filter('woocommerce_order_get_payment_method_title', array($this, 'woocommerce_order_get_payment_method_title'), 0, 2);
-
-		// Actions
-		add_action( 'woocommerce_update_options_payment_gateways_' . $this->id, array(
-			$this,
-			'process_admin_options'
-		) );
-
-		add_action( 'woocommerce_thankyou_' . $this->id, array(
-			$this,
-			'thankyou_page'
-		) );
-
-		// Payment listener/API hook
-		add_action( 'woocommerce_api_wc_gateway_' . $this->id, array(
-			$this,
-			'notification_callback'
-		) );
-
-		// Receipt hook
-		add_action( 'woocommerce_receipt_' . $this->id, array(
-			$this,
-			'receipt_page'
-		) );
+		$this->init_hooks();
 	}
 
 	/**
@@ -187,14 +163,5 @@ class WC_Gateway_Mondido_Preselect extends WC_Gateway_Mondido_HW {
 		}
 
 		return $fields;
-	}
-
-	public function woocommerce_order_get_payment_method_title($value, $order)
-	{
-		if ($order->get_payment_method() !== $this->id) {
-			return $value;
-		}
-
-		return $this->get_payment_method_name($value, $order, $this->preselected_method, $this->method_title);
 	}
 }
