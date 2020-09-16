@@ -4,6 +4,9 @@ if ( ! defined( 'ABSPATH' ) ) {
 } // Exit if accessed directly
 
 class WC_Gateway_Mondido_HW extends WC_Gateway_Mondido_Abstract {
+
+    protected $preselected_method = null;
+
 	/**
 	 * Init
 	 */
@@ -47,7 +50,7 @@ class WC_Gateway_Mondido_HW extends WC_Gateway_Mondido_Abstract {
 		$this->merchant_id       = isset( $this->settings['merchant_id'] ) ? $this->settings['merchant_id'] : '';
 		$this->secret            = isset( $this->settings['secret'] ) ? $this->settings['secret'] : '';
 		$this->password          = isset( $this->settings['password'] ) ? $this->settings['password'] : '';
-		$this->testmode          = isset( $this->settings['testmode'] ) ? $this->settings['testmode'] : 'no';
+		$this->testmode          = isset( $this->settings['testmode'] ) ? $this->settings['testmode'] : 'yes';
 		$this->authorize         = isset( $this->settings['authorize'] ) ? $this->settings['authorize'] : 'no';
 		$this->tax_status        = isset( $this->settings['tax_status'] ) ? $this->settings['tax_status'] : 'none';
 		$this->tax_class         = isset( $this->settings['tax_class'] ) ? $this->settings['tax_class'] : 'standard';
@@ -55,15 +58,15 @@ class WC_Gateway_Mondido_HW extends WC_Gateway_Mondido_Abstract {
 		$this->logos             = isset( $this->settings['logos'] ) ? $this->settings['logos'] : array();
 		$this->order_button_text = isset( $this->settings['order_button_text'] ) ? $this->settings['order_button_text'] : __( 'Pay with Mondido', 'woocommerce-gateway-mondido' );
 
+		$this->init_hooks();
+	}
+
+	public function init_hooks()
+	{
 		// Actions
 		add_action( 'woocommerce_update_options_payment_gateways_' . $this->id, array(
 			$this,
 			'process_admin_options'
-		) );
-
-		add_action( 'woocommerce_thankyou_' . $this->id, array(
-			$this,
-			'thankyou_page'
 		) );
 
 		// Payment listener/API hook
@@ -79,13 +82,15 @@ class WC_Gateway_Mondido_HW extends WC_Gateway_Mondido_Abstract {
 		) );
 
 		// Payment confirmation
-		add_action( 'the_post', array( &$this, 'payment_confirm' ) );
+		add_action( 'woocommerce_thankyou_order_id', array( &$this, 'payment_confirm' ), 10, 1 );
 
 		// Add form hash
 		add_filter( 'woocommerce_mondido_form_fields', array(
 			$this,
 			'add_form_hash_value'
 		), 10, 3 );
+
+		add_filter('woocommerce_order_get_payment_method_title', array($this, 'woocommerce_order_get_payment_method_title'), 0, 2);
 	}
 
 	/**
@@ -134,7 +139,7 @@ class WC_Gateway_Mondido_HW extends WC_Gateway_Mondido_Abstract {
 				'title'   => __( 'Test Mode', 'woocommerce-gateway-mondido' ),
 				'type'    => 'checkbox',
 				'label'   => __( 'Set in testmode', 'woocommerce-gateway-mondido' ),
-				'default' => 'no'
+				'default' => 'yes'
 			),
 			'authorize'         => array(
 				'title'   => __( 'Authorize', 'woocommerce-gateway-mondido' ),
@@ -350,57 +355,24 @@ class WC_Gateway_Mondido_HW extends WC_Gateway_Mondido_Abstract {
 	}
 
 	/**
-	 * Thank you page
-	 *
-	 * @param $order_id
-	 *
-	 * @return void
-	 */
-	public function thankyou_page( $order_id ) {
-		//
-	}
-
-	/**
 	 * Payment confirm action
 	 * @return void
 	 */
-	public function payment_confirm() {
-		if ( ! is_wc_endpoint_url( 'order-received' ) ) {
-			return;
+	public function payment_confirm($order_id) {
+		if (!array_key_exists('transaction_id', $_GET) ||!array_key_exists('payment_ref', $_GET) || !array_key_exists('status', $_GET) || !array_key_exists('hash', $_GET)) {
+			return $order_id;
 		}
-
-		if ( empty( $_GET['key'] ) ) {
-			return;
-		}
-
-		// Validate Payment Method
-		$order_id = wc_get_order_id_by_order_key( $_GET['key'] );
-		if ( ! $order_id ) {
-			return;
-		}
-
-		/** @var WC_Order $order */
-		$order = wc_get_order( $order_id );
-		if ( $order && $order->get_payment_method() !== $this->id ) {
-			return;
-		}
-
-		if ( $order->is_paid() ) {
-            return;
-        }
 
 		$transaction_id = wc_clean( $_GET['transaction_id'] );
 		$payment_ref    = wc_clean( $_GET['payment_ref'] );
 		$status         = wc_clean( $_GET['status'] );
+		$hash           = wc_clean( $_GET['hash'] );
 
-		// Transaction ID value failback
-		//if ( $_GET['transaction_id'] === true ) {
-			//$matches = array();
-			//preg_match( '/[\?&]transaction_id=([^&#]*)/m', $_SERVER['REQUEST_URI'], $matches );
-			//if ( isset( $matches[1] ) ) {
-				//$transaction_id = $matches[1];
-			//}
-		//}
+		$order_key = empty( $_GET['key'] ) ? '' : wc_clean( wp_unslash( $_GET['key'] ) );
+		$order = wc_get_order( $order_id );
+		if ( !$order || $order->get_payment_method() !== $this->id || !hash_equals($order->get_order_key(), $order_key) ) {
+			return $order_id;
+		}
 
 		$this->log( "Incoming Payment confirmation. Transaction ID: {$transaction_id}. Status: {$status}. Order ID: {$payment_ref}" );
 		$this->log( "Request URI: {$_SERVER['REQUEST_URI']}" );
@@ -408,13 +380,18 @@ class WC_Gateway_Mondido_HW extends WC_Gateway_Mondido_Abstract {
 		// Verify Payment Reference
 		if ( $payment_ref != $order_id ) {
 			wc_add_notice( __( 'Payment Reference verification failed', 'woocommerce-gateway-mondido' ), 'error' );
-			return;
+			return $order_id;
 		}
+
+		if ( $order->is_paid() ) {
+			return $order_id;
+		}
+
 
 		// Use transient to prevent multiple requests
 		if ( get_transient( 'mondido_transaction_' . $transaction_id . $status ) !== false ) {
 			$this->log( "Payment confirmation rejected. Transaction ID: {$transaction_id}. Status: {$status}" );
-			return;
+			return $order_id;
 		}
 		set_transient( 'mondido_transaction_' . $transaction_id . $status, true, MINUTE_IN_SECONDS );
 
@@ -426,7 +403,7 @@ class WC_Gateway_Mondido_HW extends WC_Gateway_Mondido_Abstract {
 			}
 
 			// Verify hash
-			$hash = md5( sprintf( '%s%s%s%s%s%s%s',
+			$calculated_hash = md5( sprintf( '%s%s%s%s%s%s%s',
 				$this->merchant_id,
 				$payment_ref,
 				$this->getCustomerReference( $order ),
@@ -435,7 +412,7 @@ class WC_Gateway_Mondido_HW extends WC_Gateway_Mondido_Abstract {
 				$status,
 				$this->secret
 			) );
-			if ( $hash !== wc_clean( $_GET['hash'] ) ) {
+			if ( $calculated_hash !== $hash ) {
 				throw new Exception( __( 'Hash verification failed', 'woocommerce-gateway-mondido' ) );
 			}
 
@@ -448,6 +425,7 @@ class WC_Gateway_Mondido_HW extends WC_Gateway_Mondido_Abstract {
 
 		// Unlock order processing
 		$this->unlock_order( $payment_ref );
+		return $order_id;
 	}
 
 	/**
@@ -717,5 +695,14 @@ class WC_Gateway_Mondido_HW extends WC_Gateway_Mondido_Abstract {
 		}
 		
 		return $active_logos;
+	}
+
+	public function woocommerce_order_get_payment_method_title($value, $order)
+	{
+		if ($order->get_payment_method() !== $this->id) {
+			return $value;
+		}
+
+		return $this->get_payment_method_name($value, $order, $this->preselected_method, $this->method_title);
 	}
 }

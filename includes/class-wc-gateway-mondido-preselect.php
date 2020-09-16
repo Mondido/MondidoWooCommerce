@@ -4,17 +4,25 @@ if ( ! defined( 'ABSPATH' ) ) {
 	exit;
 } // Exit if accessed directly
 
-class WC_Gateway_Mondido_PayPal extends WC_Gateway_Mondido_HW {
+class WC_Gateway_Mondido_Preselect extends WC_Gateway_Mondido_HW {
+
+    private $default_method_title;
+    private $default_button_text;
+
 	/**
 	 * Init
 	 */
-	public function __construct() {
-		$this->id                 = 'mondido_paypal';
+	public function __construct($preselected_method, $method_title, $button_text, $description = '') {
+		$this->id                 = "mondido_$preselected_method";
 		$this->has_fields         = TRUE;
-		$this->method_title       = __( 'Mondido PayPal', 'woocommerce-gateway-mondido' );
-		$this->method_description = '';
+		$this->method_title       = __( "Mondido $method_title", 'woocommerce-gateway-mondido' );
+		$this->method_description = $description;
+		$this->preselected_method = $preselected_method;
 
-		$this->icon     = apply_filters( 'woocommerce_mondido_paypal_icon', plugins_url( '/assets/images/paypal.png', dirname( __FILE__ ) ) );
+		$this->default_method_title = $method_title;
+		$this->default_button_text = $button_text;
+
+		$this->icon     = apply_filters( "woocommerce_{$preselected_method}_icon", plugins_url( "/assets/images/{$preselected_method}.png", dirname( __FILE__ ) ) );
 		$this->supports = array(
 			'products',
 			'refunds',
@@ -28,45 +36,24 @@ class WC_Gateway_Mondido_PayPal extends WC_Gateway_Mondido_HW {
 
 		// Define variables
 		$this->enabled     = isset( $this->settings['enabled'] ) ? $this->settings['enabled'] : 'no';
-		$this->title       = isset( $this->settings['title'] ) ? $this->settings['title'] : __( 'PayPal', 'woocommerce-gateway-mondido' );
+		$this->title       = isset( $this->settings['title'] ) ? $this->settings['title'] : __( $method_title, 'woocommerce-gateway-mondido' );
 		$this->description = isset( $this->settings['description'] ) ? $this->settings['description'] : '';
 		$this->merchant_id = isset( $this->settings['merchant_id'] ) ? $this->settings['merchant_id'] : '';
 		$this->secret      = isset( $this->settings['secret'] ) ? $this->settings['secret'] : '';
 		$this->password    = isset( $this->settings['password'] ) ? $this->settings['password'] : '';
-		$this->testmode    = isset( $this->settings['testmode'] ) ? $this->settings['testmode'] : 'no';
+		$this->testmode    = isset( $this->settings['testmode'] ) ? $this->settings['testmode'] : 'yes';
 		$this->authorize   = isset( $this->settings['authorize'] ) ? $this->settings['authorize'] : 'no';
 		$this->tax_status  = isset( $this->settings['tax_status'] ) ? $this->settings['tax_status'] : 'none';
 		$this->tax_class   = isset( $this->settings['tax_class'] ) ? $this->settings['tax_class'] : 'standard';
 		$this->logos             = isset( $this->settings['logos'] ) ? $this->settings['logos'] : array();
-		$this->order_button_text = isset( $this->settings['order_button_text'] ) ? $this->settings['order_button_text'] : __( 'Pay with PayPal', 'woocommerce-gateway-mondido' );
+		$this->order_button_text = isset( $this->settings['order_button_text'] ) ? $this->settings['order_button_text'] : __( $button_text, 'woocommerce-gateway-mondido' );
 
 		add_filter( 'woocommerce_mondido_form_fields', array(
 			$this,
 			'set_payment_method'
 		), 10, 3 );
 
-		// Actions
-		add_action( 'woocommerce_update_options_payment_gateways_' . $this->id, array(
-			$this,
-			'process_admin_options'
-		) );
-
-		add_action( 'woocommerce_thankyou_' . $this->id, array(
-			$this,
-			'thankyou_page'
-		) );
-
-		// Payment listener/API hook
-		add_action( 'woocommerce_api_wc_gateway_' . $this->id, array(
-			$this,
-			'notification_callback'
-		) );
-
-		// Receipt hook
-		add_action( 'woocommerce_receipt_' . $this->id, array(
-			$this,
-			'receipt_page'
-		) );
+		$this->init_hooks();
 	}
 
 	/**
@@ -78,14 +65,14 @@ class WC_Gateway_Mondido_PayPal extends WC_Gateway_Mondido_HW {
 			'enabled'           => array(
 				'title'   => __( 'Enable/Disable', 'woocommerce-gateway-mondido' ),
 				'type'    => 'checkbox',
-				'label'   => __( 'Enable Mondido PayPal', 'woocommerce-gateway-mondido' ),
+				'label'   => sprintf(__( 'Enable %s', 'woocommerce-gateway-mondido' ), $method_title),
 				'default' => 'no'
 			),
 			'title'             => array(
 				'title'       => __( 'Title', 'woocommerce-gateway-mondido' ),
 				'type'        => 'text',
 				'description' => __( 'This controls the title which the user sees during checkout.', 'woocommerce-gateway-mondido' ),
-				'default'     => __( 'PayPal', 'woocommerce-gateway-mondido' )
+				'default'     => __( $this->default_method_title, 'woocommerce-gateway-mondido' )
 			),
 			'description'       => array(
 				'title'       => __( 'Description', 'woocommerce-gateway-mondido' ),
@@ -115,7 +102,7 @@ class WC_Gateway_Mondido_PayPal extends WC_Gateway_Mondido_HW {
 				'title'   => __( 'Test Mode', 'woocommerce-gateway-mondido' ),
 				'type'    => 'checkbox',
 				'label'   => __( 'Set in testmode', 'woocommerce-gateway-mondido' ),
-				'default' => 'no'
+				'default' => 'yes'
 			),
 			'authorize'         => array(
 				'title'   => __( 'Authorize', 'woocommerce-gateway-mondido' ),
@@ -143,7 +130,7 @@ class WC_Gateway_Mondido_PayPal extends WC_Gateway_Mondido_HW {
 			'order_button_text' => array(
 				'title'   => __( 'Text for "Place Order" button', 'woocommerce-gateway-mondido' ),
 				'type'    => 'text',
-				'default' => __( 'Pay with PayPal', 'woocommerce-gateway-mondido' ),
+				'default' => __( $this->default_button_text, 'woocommerce-gateway-mondido' ),
 			),
 		);
 	}
@@ -172,7 +159,7 @@ class WC_Gateway_Mondido_PayPal extends WC_Gateway_Mondido_HW {
         }
 
 		if ( $order->get_payment_method() === $this->id) {
-			$fields['payment_method'] = 'paypal';
+			$fields['payment_method'] = $this->preselected_method;
 		}
 
 		return $fields;

@@ -287,6 +287,28 @@ abstract class WC_Gateway_Mondido_Abstract extends WC_Payment_Gateway {
 		return FALSE;
 	}
 
+	public function lookupTransactionByOrderId( $order_id ) {
+		$result = wp_remote_get("https://api.mondido.com/v1/transactions?filter[payment_ref]=$order_id", array(
+			'headers' => array(
+				'Authorization' => 'Basic ' . base64_encode( "{$this->merchant_id}:{$this->password}" )
+			)
+		) );
+
+		if ( is_a( $result, 'WP_Error' ) ) {
+			throw new Exception( implode( $result->errors['http_request_failed'] ) );
+		}
+
+		if ( $result['response']['code'] != 200 ) {
+			throw new Exception( $result['body'] );
+		} else {
+			$data = json_decode( $result['body'], TRUE );
+			if (count($data) === 0) {
+				return null;
+			}
+			return $data[0];
+		}
+	}
+
 	/**
 	 * Capture Transaction
 	 *
@@ -828,6 +850,43 @@ abstract class WC_Gateway_Mondido_Abstract extends WC_Payment_Gateway {
 		}
 
 		return json_decode( $result['body'], TRUE );
+	}
+
+	public function get_payment_method_name($value, $order, $default_value)
+	{
+		$transaction = get_post_meta( $order->get_id(), '_mondido_transaction_data', TRUE );
+
+		if (!$transaction) {
+			$transaction = $this->lookupTransactionByOrderId($order->get_id());
+		}
+
+		if (!empty($transaction['transaction_type'])) {
+			switch ($transaction['transaction_type']) {
+				case 'after_pay': return __('After Pay', 'woocommerce-gateway-mondido');
+				case 'amex': return __('American Express', 'woocommerce-gateway-mondido');
+				case 'bank': return __('Bank', 'woocommerce-gateway-mondido');
+				case 'credit_card': return __('Card', 'woocommerce-gateway-mondido');
+				case 'diners': return __('Diners', 'woocommerce-gateway-mondido');
+				case 'discover': return __('Discover', 'woocommerce-gateway-mondido');
+				case 'e_payment': return __('E-payment', 'woocommerce-gateway-mondido');
+				case 'e_payments': return __('E-Payments', 'woocommerce-gateway-mondido');
+				case 'invoice': return __('Invoice', 'woocommerce-gateway-mondido');
+				case 'jcb': return __('JCB', 'woocommerce-gateway-mondido');
+				case 'manual_invoice': return __('Manual Invoice', 'woocommerce-gateway-mondido');
+				case 'mastercard': return __('Mastercard', 'woocommerce-gateway-mondido');
+				case 'mobile_pay': return __('Mobile Pay', 'woocommerce-gateway-mondido');
+				case 'payment': return __('Payment', 'woocommerce-gateway-mondido');
+				case 'paypal': return __('PayPal', 'woocommerce-gateway-mondido');
+				case 'recurring': return __('Recurring', 'woocommerce-gateway-mondido');
+				case 'siirto': return __('Siirto', 'woocommerce-gateway-mondido');
+				case 'stored_card': return __('Stored card', 'woocommerce-gateway-mondido');
+				case 'swish': return __('Swish', 'woocommerce-gateway-mondido');
+				case 'vipps': return __('Vipps', 'woocommerce-gateway-mondido');
+				case 'visa': return __('Visa', 'woocommerce-gateway-mondido');
+			}
+		}
+
+		return $default_value;
 	}
 
 	private function get_country_alpha2($code)
