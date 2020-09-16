@@ -1,5 +1,11 @@
 *** WooCommerce Mondido Payments Gateway Changelog ***
 
+2020-09-16 - version 4.4.0
+* add card as a payment gateway
+* show the actual payment method used in thank you page and order confirmation email
+* handle case when customer tries and fails on first payment and succeeds on
+  second try, show successful page and not "payment was not approved"
+
 2020-07-02 - version 4.3.4
 * follow the hardcoded order of payment method instead of the one stored in settings
 
