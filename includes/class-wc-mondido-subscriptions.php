@@ -15,11 +15,6 @@ class WC_Mondido_Subscriptions {
 		add_action( 'woocommerce_process_product_meta', __CLASS__ . '::save_subscription_field' );
 		add_filter( 'woocommerce_cart_needs_payment', __CLASS__ . '::cart_needs_payment', 10, 2 );
 		add_filter( 'woocommerce_order_needs_payment', __CLASS__ . '::order_needs_payment', 10, 3 );
-		add_filter( 'woocommerce_mondido_form_fields', array(
-			$this,
-			'add_recurring_items'
-		), 9, 3 );
-		add_filter( 'woocommerce_free_price_html', __CLASS__ . '::remove_free_price', 10, 2 );
 	}
 
 	/**
@@ -157,75 +152,6 @@ class WC_Mondido_Subscriptions {
 		}
 
 		return $needs_payment;
-	}
-
-	/**
-	 * Add Recurring fields
-	 *
-	 * @param array              $fields
-	 * @param WC_Order           $order
-	 * @param WC_Payment_Gateway $gateway
-	 *
-	 * @return mixed
-	 */
-	public function add_recurring_items( $fields, $order, $gateway ) {
-		if ( ! $order ) {
-			return $fields;
-		}
-        $is_wc3 = version_compare(WC()->version, '3.0', '>=');
-
-        $plan_id = null;
-        $quantity = 0;
-        $items = [];
-
-		foreach ( $order->get_items( 'line_item' ) as $order_item ) {
-			$product_id = $is_wc3 ? $order_item->get_product_id() : $order_item['product_id'];
-			$product_plan_id = get_post_meta( $product_id, '_mondido_plan_id', TRUE );
-
-			if (empty($product_plan_id)) {
-				continue;
-			}
-
-			if ($plan_id === null) {
-				$plan_id = $product_plan_id;
-			}
-
-			if ($product_plan_id !== $plan_id) {
-				wc_add_notice(__(
-					'Order with multiple subscription plans is not supported',
-					'whitelabelmodulenamespace'
-				), 'error');
-				return wp_redirect(wc_get_cart_url());
-			}
-
-			$quantity += (int) ($is_wc3 ? $order_item->get_quantity() : $order_item['qty']);
-
-			if (get_post_meta( $product_id, '_mondido_plan_include', TRUE )) {
-				$product      = wc_get_product( $product_id );
-				$sku          = $product->get_sku();
-				$price        = $order->get_line_subtotal( $order_item, FALSE, FALSE );
-				$priceWithTax = $order->get_line_subtotal( $order_item, TRUE, FALSE );
-				$tax          = $priceWithTax - $price;
-				$taxPercent   = ( $tax > 0 ) ? round( 100 / ( $price / $tax ) ) : 0;
-
-				$items[] = array(
-					'artno'       => empty( $sku ) ? 'product_id' . $product->get_id() : $sku,
-					'description' => $is_wc3 ? $order_item->get_name() : $order_item['name'],
-					'amount'      => number_format( $priceWithTax, 2, '.', '' ),
-					'qty'         => $is_wc3 ? $order_item->get_quantity() : $order_item['qty'],
-					'vat'         => number_format( $taxPercent, 2, '.', '' ),
-					'discount'    => 0
-				);
-			}
-		}
-
-        if ($plan_id !== null) {
-            $fields['plan_id']               = $plan_id;
-            $fields['subscription_quantity'] = $quantity;
-            $fields['subscription_items'] = $items;
-        }
-
-		return $fields;
 	}
 
 	/**

@@ -48,11 +48,6 @@ class WC_Gateway_Mondido_Preselect extends WC_Gateway_Mondido_HW {
 		$this->logos             = isset( $this->settings['logos'] ) ? $this->settings['logos'] : array();
 		$this->order_button_text = isset( $this->settings['order_button_text'] ) ? $this->settings['order_button_text'] : __( $button_text, 'woocommerce-gateway-mondido' );
 
-		add_filter( 'woocommerce_mondido_form_fields', array(
-			$this,
-			'set_payment_method'
-		), 10, 3 );
-
 		$this->init_hooks();
 	}
 

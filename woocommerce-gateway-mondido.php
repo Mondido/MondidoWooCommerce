@@ -126,12 +126,14 @@ CREATE TABLE IF NOT EXISTS `{$wpdb->prefix}mondido_customers` (
 
 		include_once( dirname( __FILE__ ) . '/includes/class-wc-gateway-mondido-hw.php' );
 		include_once( dirname( __FILE__ ) . '/includes/class-wc-gateway-mondido-preselect.php' );
+		include_once( dirname( __FILE__ ) . '/includes/class-wc-mondido-api.php' );
+		include_once( dirname( __FILE__ ) . '/includes/class-wc-mondido-transaction.php' );
 
 		include_once( dirname( __FILE__ ) . '/includes/class-wc-payment-token-mondido.php' );
 
 		WC_Mondido_Payments::register_preselect_gateway('swish', 'Swish', 'Pay with Swish');
 		WC_Mondido_Payments::register_preselect_gateway('bank', 'Direct Bank', 'Pay with Direct Bank');
-		WC_Mondido_Payments::register_gateway( new WC_Gateway_Mondido_HW() );
+		WC_Mondido_Payments::register_gateway( new WC_Gateway_Mondido_HW());
 		WC_Mondido_Payments::register_preselect_gateway('credit_card', 'Card', 'Pay with Card');
 		WC_Mondido_Payments::register_preselect_gateway('paypal', 'PayPal', 'Pay with PayPal');
 		WC_Mondido_Payments::register_preselect_gateway('invoice', 'Invoice', 'Pay with Mondido');
@@ -177,23 +179,21 @@ CREATE TABLE IF NOT EXISTS `{$wpdb->prefix}mondido_customers` (
 	 * @param string $class_name
 	 */
 	private static function register_gateway( $gateway ) {
-		global $mondido_gateways;
+		$transaction = new WC_Mondido_Transaction(new WC_Mondido_Api(
+			$gateway->merchant_id,
+			$gateway->password,
+			new WP_Http(),
+			new WC_Logger(),
+			$gateway->id
+		));
+		$gateway->add_dependencies($transaction);
 
-		if ( ! $mondido_gateways ) {
-			$mondido_gateways = array();
-		}
+		// Register gateway instance
+		add_filter( 'woocommerce_payment_gateways', function ( $methods ) use ( $gateway ) {
+			$methods[] = $gateway;
 
-		if ( ! isset( $mondido_gateways[ get_class($gateway) ] ) ) {
-			// Initialize instance
-			$mondido_gateways[] = $gateway;
-
-			// Register gateway instance
-			add_filter( 'woocommerce_payment_gateways', function ( $methods ) use ( $gateway ) {
-				$methods[] = $gateway;
-
-				return $methods;
-			} );
-		}
+			return $methods;
+		} );
 	}
 }
 
