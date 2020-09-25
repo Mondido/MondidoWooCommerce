@@ -16,9 +16,10 @@ class WC_Mondido_Transaction {
 		$successful_url,
 		$failure_url,
 		$payment_callback_url,
-        $secret,
+		$secret,
 		$payment_method,
-		$customer_reference
+		$customer_reference,
+		$store_card
 	) {
 		$payment_reference = $order->get_id();
 		$items = $this->get_items($order);
@@ -42,7 +43,7 @@ class WC_Mondido_Transaction {
 			'success_url' => $successful_url,
 			'error_url' => $failure_url,
 			'test' => $this->format_bool($testmode),
-			'store_card' => $this->format_bool(false),
+			'store_card' => $this->format_bool($store_card),
 			'authorize' => $this->format_bool($authorize),
 			'process' => $this->format_bool(false),
 			'items' => $items,
@@ -77,7 +78,8 @@ class WC_Mondido_Transaction {
 		$testmode,
 		$authorize,
 		$secret,
-		$customer_reference
+		$customer_reference,
+		$store_card
 	) {
 		$payment_reference = $order->get_id();
 		$items = $this->get_items($order);
@@ -99,7 +101,7 @@ class WC_Mondido_Transaction {
 			'customer_ref' => $customer_reference,
 			'payment_ref' => $payment_reference,
 			'test' => $this->format_bool($testmode),
-			'store_card' => $this->format_bool(false),
+			'store_card' => $this->format_bool($store_card),
 			'authorize' => $this->format_bool($authorize),
 			'process' => $this->format_bool(false),
 			'items' => $items,

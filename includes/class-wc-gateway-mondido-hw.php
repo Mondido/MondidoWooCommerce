@@ -258,6 +258,7 @@ class WC_Gateway_Mondido_HW extends WC_Gateway_Mondido_Abstract {
 		}
 
 		$transaction_id = $order->get_transaction_id();
+		$store_card = (bool) get_post_meta($order_id, '_mondido_store_card', true);
 
 		if ($transaction_id) {
 			$transaction = $this->transaction->get($transaction_id);
@@ -270,7 +271,8 @@ class WC_Gateway_Mondido_HW extends WC_Gateway_Mondido_Abstract {
 					$this->testmode === 'yes',
 					$this->payment_action === 'authorize',
 					$this->secret,
-					$this->getCustomerReference($order)
+					$this->getCustomerReference($order),
+					$store_card
 				);
 			}
 		} else {
@@ -284,7 +286,8 @@ class WC_Gateway_Mondido_HW extends WC_Gateway_Mondido_Abstract {
 				add_query_arg( 'wp_hook', '1', WC()->api_request_url(__CLASS__)),
 				$this->secret,
 				$this->preselected_method,
-				$this->getCustomerReference($order)
+				$this->getCustomerReference($order),
+				$store_card
 			);
 
 			if (!is_wp_error($transaction)) {
