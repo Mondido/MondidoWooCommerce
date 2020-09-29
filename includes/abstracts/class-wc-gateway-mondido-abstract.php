@@ -326,6 +326,7 @@ abstract class WC_Gateway_Mondido_Abstract extends WC_Payment_Gateway {
 		$transaction_id = $order->get_transaction_id();
 
 		$result = wp_remote_get( 'https://api.mondido.com/v1/refunds', array(
+			'timeout' => 40,
 			'method'  => 'POST',
 			'headers' => array(
 				'Authorization' => 'Basic ' . base64_encode( "{$this->merchant_id}:{$this->password}" )
