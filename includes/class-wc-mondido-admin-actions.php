@@ -99,7 +99,9 @@ class WC_Mondido_Admin_Actions {
 		$order_id       = (int) $_REQUEST['order_id'];
 
 		$order   = wc_get_order( $order_id );
-		$gateway = new WC_Gateway_Mondido_HW();
+
+		$gateways = WC()->payment_gateways->get_available_payment_gateways();
+		$gateway = $gateways[$order->get_payment_method()];
 
 		$transaction = $gateway->captureTransaction( $transaction_id, $order->get_total() );
 		if ( is_wp_error( $transaction ) ) {
