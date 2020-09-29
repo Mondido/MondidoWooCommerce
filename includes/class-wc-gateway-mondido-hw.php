@@ -269,7 +269,7 @@ class WC_Gateway_Mondido_HW extends WC_Gateway_Mondido_Abstract {
 					$order,
 					$this->merchant_id,
 					$this->testmode === 'yes',
-					$this->payment_action === 'authorize',
+					$this->authorize === 'yes',
 					$this->secret,
 					$this->getCustomerReference($order),
 					$store_card
@@ -280,7 +280,7 @@ class WC_Gateway_Mondido_HW extends WC_Gateway_Mondido_Abstract {
 				$order,
 				$this->merchant_id,
 				$this->testmode === 'yes',
-				$this->payment_action === 'authorize',
+				$this->authorize === 'yes',
 				$this->get_return_url($order),
 				$order->get_cancel_order_url_raw(),
 				add_query_arg( 'wp_hook', '1', WC()->api_request_url(__CLASS__)),
