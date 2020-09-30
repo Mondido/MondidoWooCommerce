@@ -75,20 +75,8 @@ class WC_Gateway_Mondido_HW extends WC_Gateway_Mondido_Abstract {
 			'notification_callback'
 		) );
 
-		// Receipt hook
-		add_action( 'woocommerce_receipt_' . $this->id, array(
-			$this,
-			'receipt_page'
-		) );
-
 		// Payment confirmation
 		add_action( 'woocommerce_thankyou_order_id', array( &$this, 'payment_confirm' ), 10, 1 );
-
-		// Add form hash
-		add_filter( 'woocommerce_mondido_form_fields', array(
-			$this,
-			'add_form_hash_value'
-		), 10, 3 );
 
 		add_filter('woocommerce_order_get_payment_method_title', array($this, 'woocommerce_order_get_payment_method_title'), 0, 2);
 	}
@@ -269,10 +257,59 @@ class WC_Gateway_Mondido_HW extends WC_Gateway_Mondido_Abstract {
 			}
 		}
 
-		return array(
-			'result'   => 'success',
-			'redirect' => $order->get_checkout_payment_url( TRUE )
-		);
+		$transaction_id = $order->get_transaction_id();
+		$store_card = (bool) get_post_meta($order_id, '_mondido_store_card', true);
+
+		if ($transaction_id) {
+			$transaction = $this->transaction->get($transaction_id);
+
+			if (!is_wp_error($transaction)) {
+				$transaction = $this->transaction->update(
+					$transaction->id,
+					$order,
+					$this->merchant_id,
+					$this->testmode === 'yes',
+					$this->authorize === 'yes',
+					$this->secret,
+					$this->getCustomerReference($order),
+					$store_card
+				);
+			}
+		} else {
+			$transaction = $this->transaction->create(
+				$order,
+				$this->merchant_id,
+				$this->testmode === 'yes',
+				$this->authorize === 'yes',
+				$this->get_return_url($order),
+				$order->get_cancel_order_url_raw(),
+				add_query_arg( 'wp_hook', '1', WC()->api_request_url(__CLASS__)),
+				$this->secret,
+				$this->preselected_method,
+				$this->getCustomerReference($order),
+				$store_card
+			);
+
+			if (!is_wp_error($transaction)) {
+				update_post_meta( $order_id, '_transaction_id', $transaction->id );
+			}
+
+		}
+
+		if (is_wp_error($transaction)) {
+			$this->logger->critical('Could not handle transaction', [
+				'source' => $this->id,
+				'transaction_id' => $transaction_id,
+				'errors' => $transaction->get_error_messages()
+			]);
+			wc_add_notice(sprintf(__('Error: %s', 'woocommerce-gateway-mondido' ), $transaction->get_error_message()), 'error');
+			return;
+		}
+
+        return array(
+            'result' => 'success',
+            'redirect' => $transaction->href,
+        );
 	}
 
 	/**
@@ -281,77 +318,6 @@ class WC_Gateway_Mondido_HW extends WC_Gateway_Mondido_Abstract {
 	 */
 	public function validate_fields() {
 		//
-	}
-
-	/**
-	 * Receipt Page
-	 *
-	 * @param int $order_id
-	 *
-	 * @return void
-	 */
-	public function receipt_page( $order_id ) {
-		$order = wc_get_order( $order_id );
-
-		// Get Stored Card
-		$store_card = get_post_meta( $order_id, '_mondido_store_card', true );
-
-		// Prepare Order Items
-		$items = $this->getOrderItems( $order );
-
-		// Prepare Metadata
-        $metadata = $this->getMetaData( $order );
-
-		// Prepare WebHook
-		$webhook = array(
-			'url'         => add_query_arg( 'wp_hook', '1', WC()->api_request_url( __CLASS__ ) ),
-			'trigger'     => 'payment',
-			'http_method' => 'post',
-			'data_format' => 'json',
-			'type'        => 'CustomHttp'
-		);
-
-		$amount = array_sum( array_column( $items, 'amount' ) );
-
-		// Prepare fields
-		$fields = array(
-			'amount'       => number_format( $amount, 2, '.', '' ),
-			'vat_amount'   => 0,
-			'merchant_id'  => $this->merchant_id,
-			'currency'     => $order->get_currency(),
-			'customer_ref' => $this->getCustomerReference( $order ),
-			'payment_ref'  => $order->get_id(),
-			'success_url'  => $this->get_return_url( $order ),
-			'error_url'    => $order->get_cancel_order_url_raw(),
-			'metadata'     => $metadata,
-			'test'         => $this->testmode === 'yes' ? 'true' : 'false',
-			'store_card'   => $store_card ? 'true' : 'false',
-			'authorize'    => $this->authorize === 'yes' ? 'true' : '',
-			'items'        => $items,
-			'webhook'      => $webhook,
-			'payment_details' => [
-				'email' => $metadata['customer']['email'],
-				'phone' => $metadata['customer']['phone'],
-				'first_name' => $metadata['customer']['firstname'],
-				'last_name' => $metadata['customer']['lastname'],
-				'zip' => $metadata['customer']['postcode'],
-				'address_1' => $metadata['customer']['address1'],
-				'address_2' => $metadata['customer']['address2'],
-				'city' => $metadata['customer']['city'],
-				'country_code' => $metadata['customer']['country'],
-			],
-		);
-
-		wc_get_template(
-			'checkout/mondido-form.php',
-			array(
-				'fields'  => apply_filters( 'woocommerce_mondido_form_fields', $fields, $order, $this ),
-				'order'   => $order,
-				'gateway' => $this,
-			),
-			'',
-			dirname( __FILE__ ) . '/../templates/'
-		);
 	}
 
 	/**

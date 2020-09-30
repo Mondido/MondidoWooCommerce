@@ -5,6 +5,12 @@ if ( ! defined( 'ABSPATH' ) ) {
 } // Exit if accessed directly
 
 abstract class WC_Gateway_Mondido_Abstract extends WC_Payment_Gateway {
+	protected $transaction;
+
+	public function add_dependencies(WC_Mondido_Transaction $transaction) {
+		$this->transaction = $transaction;
+	}
+
 	/**
 	 * Debug Log
 	 *
@@ -25,138 +31,6 @@ abstract class WC_Gateway_Mondido_Abstract extends WC_Payment_Gateway {
 		$log->log( $level, $message, array( 'source' => $this->id, '_legacy' => true ) );
 	}
 
-    /**
-     * Get Order Items
-     * @param WC_Order $order
-     *
-     * @return array
-     */
-    public function getOrderItems($order) {
-        $items = array();
-
-        // Add Products
-        foreach ( $order->get_items() as $order_item ) {
-            $product_id = $this->is_wc3() ? $order_item->get_product_id() : $order_item['product_id'];
-            $product      = wc_get_product( $product_id );
-            $sku          = $product->get_sku();
-            $price        = $order->get_line_subtotal( $order_item, FALSE, FALSE );
-            $priceWithTax = $order->get_line_subtotal( $order_item, TRUE, FALSE );
-            $tax          = $priceWithTax - $price;
-            $taxPercent   = ( $tax > 0 ) ? round( 100 / ( $price / $tax ) ) : 0;
-
-            $items[] = array(
-                'artno'       => empty( $sku ) ? 'product_id' . $product->get_id() : $sku,
-                'description' => $this->is_wc3() ? $order_item->get_name() : $order_item['name'],
-                'amount'      => number_format( $priceWithTax, 2, '.', '' ),
-                'qty'         => $this->is_wc3() ? $order_item->get_quantity() : $order_item['qty'],
-                'vat'         => number_format( $taxPercent, 2, '.', '' ),
-                'discount'    => 0
-            );
-        }
-
-        // Add Shipping
-        if ( (float) $order->get_shipping_total() > 0 ) {
-            $taxPercent = ( $order->get_shipping_tax() > 0 ) ? round( 100 / ( $order->get_shipping_total() / $order->get_shipping_tax() ) ) : 0;
-
-            $items[] = array(
-                'artno'       => 'shipping',
-                'description' => $order->get_shipping_method(),
-                'amount'      => number_format( $order->get_shipping_total() + $order->get_shipping_tax(), 2, '.', '' ),
-                'qty'         => 1,
-                'vat'         => number_format( $taxPercent, 2, '.', '' ),
-                'discount'    => 0
-            );
-        }
-
-        // Add Discount
-        if ( $order->get_total_discount( FALSE ) > 0 ) {
-            $items[] = array(
-                'artno'       => 'discount',
-                'description' => __( 'Discount', 'woocommerce-gateway-mondido' ),
-                'amount'      => number_format( - 1 * $order->get_total_discount( FALSE ), 2, '.', '' ),
-                'qty'         => 1,
-                'vat'         => 0,
-                'discount'    => 0
-            );
-        }
-
-        // Add Fees
-        foreach ( $order->get_fees() as $fee ) {
-            if ($this->is_wc3()) {
-                /** @var WC_Order_Item_Fee $fee */
-                $fee_name = $fee->get_name();
-                $fee_total = $fee->get_total();
-                $fee_tax = $fee->get_total_tax();
-            } else {
-                $fee_name = $fee['name'];
-                $fee_total = $fee['line_total'];
-                $fee_tax = $fee['line_tax'];
-            }
-
-            $taxPercent = ( $fee_tax > 0 ) ? round( 100 / ( $fee_total / $fee_tax ) ) : 0;
-
-            $items[] = array(
-                'artno'       => 'fee',
-                'description' => $fee_name,
-                'amount'      => number_format( $fee['line_total'] + $fee_tax, 2, '.', '' ),
-                'qty'         => 1,
-                'vat'         => number_format( $taxPercent, 2, '.', '' ),
-                'discount'    => 0
-            );
-        }
-
-        return $items;
-    }
-
-    /**
-     * Get Order Meta Data
-     * @param WC_Order $order
-     *
-     * @return array
-     * @throws Exception
-     */
-    public function getMetaData($order) {
-        $metadata = array(
-        	'store_order' => array(
-        		'id' => $order->get_id(),
-	        ),
-	        'customer_reference' => $this->getCustomerReference( $order ),
-            'products'  => $this->getOrderItems( $order ),
-            'customer'  => array(
-                'user_id'   => $order->get_user_id(),
-                'firstname' => $order->get_billing_first_name(),
-                'lastname'  => $order->get_billing_last_name(),
-                'address1'  => $order->get_billing_address_1(),
-                'address2'  => $order->get_billing_address_2(),
-                'postcode'  => $order->get_billing_postcode(),
-                'phone'     => $order->get_billing_phone(),
-                'city'      => $order->get_billing_city(),
-                'country'   => $order->get_billing_country(),
-                'state'     => $order->get_billing_state(),
-                'email'     => $order->get_billing_email()
-            ),
-            'analytics' => array(),
-            'platform'  => array(
-                'type'             => 'woocommerce',
-                'version'          => WC()->version,
-                'language_version' => phpversion(),
-                'plugin_version'   => $this->getPluginVersion()
-            )
-        );
-
-        // Prepare Analytics
-        if ( isset( $_COOKIE['m_ref_str'] ) ) {
-            $metadata['analytics']['referrer'] = $_COOKIE['m_ref_str'];
-        }
-        if ( isset( $_COOKIE['m_ad_code'] ) ) {
-            $metadata['analytics']['google']            = array();
-            $metadata['analytics']['google']['ad_code'] = $_COOKIE['m_ad_code'];
-        }
-
-        return $metadata;
-    }
-
-
 	/**
 	 * Get Tax Classes
 	 * @todo Use WC_Tax::get_tax_classes()
@@ -175,20 +49,6 @@ abstract class WC_Gateway_Mondido_Abstract extends WC_Payment_Gateway {
 	}
 
 	/**
-	 * Get Plugin Version
-	 * @return string
-	 */
-	public static function getPluginVersion() {
-		$plugin_version = get_file_data(
-			dirname( __FILE__ ) . '/../../woocommerce-gateway-mondido.php',
-			array( 'Version' ),
-			'woocommerce-gateway-mondido'
-		);
-
-		return isset( $plugin_version[0] ) ? $plugin_version[0] : '';
-	}
-
-	/**
 	 * Check is WooCommerce >= 3.0
 	 * @return mixed
 	 */
@@ -204,6 +64,9 @@ abstract class WC_Gateway_Mondido_Abstract extends WC_Payment_Gateway {
 	 * @return int
 	 */
 	public function add_order_fee($fee, &$order, $qty = 1) {
+		if ($qty > 1) {
+			$fee->amount = $fee->amount / $qty;
+		}
 		for ($count = 0; $count < $qty; $count++) {
 			if ($this->is_wc3()) {
 				$item = new WC_Order_Item_Fee();
@@ -226,87 +89,22 @@ abstract class WC_Gateway_Mondido_Abstract extends WC_Payment_Gateway {
 		}
 	}
 
-	/**
-	 * @param $merchant_id
-	 * @param $password
-	 * @param $transaction_id
-	 *
-	 * @return array|mixed|object
-	 */
-	public static function __lookup( $merchant_id, $password, $transaction_id ) {
-		$result = wp_remote_get( 'https://api.mondido.com/v1/transactions/' . $transaction_id, array(
-			'headers' => array(
-				'Authorization' => 'Basic ' . base64_encode( "{$merchant_id}:{$password}" )
-			)
-		) );
-
-		if ( is_a( $result, 'WP_Error' ) ) {
-			throw new Exception( implode( $result->errors['http_request_failed'] ) );
-		}
-
-		if ( $result['response']['code'] != 200 ) {
-			throw new Exception( $result['body'] );
-		} else {
-			return json_decode( $result['body'], TRUE );
-		}
-	}
-
-	/**
-	 * Lookup transaction data
-	 *
-	 * @param $transaction_id
-	 *
-	 * @return array|bool
-	 */
 	public function lookupTransaction( $transaction_id ) {
-		try {
-			return self::__lookup( $this->merchant_id, $this->password, $transaction_id );
-		} catch ( Exception $e ) {
-			if ( strpos( $e->getMessage(), 'errors.transaction.not_found' ) !== FALSE ) {
-				// Workaround for errors.transaction.not_found
-				$attempt = 0;
-				do {
-					sleep( 5 );
-					$this->log( "lookupTransaction (not found error). Transaction ID: {$transaction_id}. Error: {$e->getMessage()}. Attempt: {$attempt}", WC_Log_Levels::WARNING );
-
-					try {
-						return self::__lookup( $this->merchant_id, $this->password, $transaction_id );
-					} catch ( Exception $e ) {
-						$attempt++;
-						if ( $attempt > 12 ) {
-							// wc_add_notice( $e->getMessage(), 'error' );
-							break;
-						}
-					}
-				} while ( TRUE );
-			}
-
-			wc_add_notice( $e->getMessage(), 'error' );
+		$transaction = $this->transaction->get($transaction_id);
+		if (is_wp_error($transaction)) {
+			wc_add_notice( $transaction->get_error_message(), 'error' );
+			return false;
 		}
-
-		return FALSE;
+		return json_decode(json_encode($transaction), true);
 	}
 
 	public function lookupTransactionByOrderId( $order_id ) {
-		$result = wp_remote_get("https://api.mondido.com/v1/transactions?filter[payment_ref]=$order_id", array(
-			'headers' => array(
-				'Authorization' => 'Basic ' . base64_encode( "{$this->merchant_id}:{$this->password}" )
-			)
-		) );
-
-		if ( is_a( $result, 'WP_Error' ) ) {
-			throw new Exception( implode( $result->errors['http_request_failed'] ) );
+		$transaction = $this->transaction->get_by_reference($order_id);
+		if (is_wp_error($transaction)) {
+			wc_add_notice( $transaction->get_error_message(), 'error' );
+			return false;
 		}
-
-		if ( $result['response']['code'] != 200 ) {
-			throw new Exception( $result['body'] );
-		} else {
-			$data = json_decode( $result['body'], TRUE );
-			if (count($data) === 0) {
-				return null;
-			}
-			return $data[0];
-		}
+		return json_decode(json_encode($transaction), true);
 	}
 
 	/**
@@ -318,17 +116,12 @@ abstract class WC_Gateway_Mondido_Abstract extends WC_Payment_Gateway {
 	 * @return array|\WP_Error
 	 */
 	public function captureTransaction( $transaction_id, $amount ) {
-		$result = wp_remote_get( 'https://api.mondido.com/v1/transactions/' . $transaction_id . '/capture', array(
-			'method'  => 'PUT',
-			'headers' => array(
-				'Authorization' => 'Basic ' . base64_encode( "{$this->merchant_id}:{$this->password}" )
-			),
-			'body'    => array(
-				'amount' => number_format( $amount, 2, '.', '' )
-			)
-		) );
+		$result = $this->transaction->capture($transaction_id, $amount);
+		if (is_wp_error($result)) {
+			return $result;
+		}
 
-		return $result;
+		return json_decode(json_encode($result), true);
 	}
 
 	/**
@@ -536,6 +329,7 @@ abstract class WC_Gateway_Mondido_Abstract extends WC_Payment_Gateway {
 		$transaction_id = $order->get_transaction_id();
 
 		$result = wp_remote_get( 'https://api.mondido.com/v1/refunds', array(
+			'timeout' => 40,
 			'method'  => 'POST',
 			'headers' => array(
 				'Authorization' => 'Basic ' . base64_encode( "{$this->merchant_id}:{$this->password}" )
@@ -857,10 +651,14 @@ abstract class WC_Gateway_Mondido_Abstract extends WC_Payment_Gateway {
 		$transaction = get_post_meta( $order->get_id(), '_mondido_transaction_data', TRUE );
 
 		if (!$transaction) {
-			$transaction = $this->lookupTransactionByOrderId($order->get_id());
+			if ($order->get_transaction_id()) {
+				$transaction = $this->lookupTransaction($order->get_transaction_id());
+			} else {
+				$transaction = $this->lookupTransactionByOrderId($order->get_id());
+			}
 		}
 
-		if (!empty($transaction['transaction_type'])) {
+		if (is_array($transaction) && !empty($transaction['transaction_type'])) {
 			switch ($transaction['transaction_type']) {
 				case 'after_pay': return __('After Pay', 'woocommerce-gateway-mondido');
 				case 'amex': return __('American Express', 'woocommerce-gateway-mondido');

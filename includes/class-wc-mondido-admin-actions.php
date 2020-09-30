@@ -99,25 +99,14 @@ class WC_Mondido_Admin_Actions {
 		$order_id       = (int) $_REQUEST['order_id'];
 
 		$order   = wc_get_order( $order_id );
-		$gateway = new WC_Gateway_Mondido_HW();
 
-		$result = $gateway->captureTransaction( $transaction_id, $order->get_total() );
-		if ( is_a( $result, 'WP_Error' ) ) {
-			$error = implode( $result->errors['http_request_failed'] );
+		$gateways = WC()->payment_gateways->get_available_payment_gateways();
+		$gateway = $gateways[$order->get_payment_method()];
+
+		$transaction = $gateway->captureTransaction( $transaction_id, $order->get_total() );
+		if ( is_wp_error( $transaction ) ) {
+			$error = implode( $transaction->errors['http_request_failed'] );
 			wp_send_json_error( sprintf( __( 'Error: %s', 'woocommerce-gateway-mondido' ), $error ) );
-
-			return;
-		}
-
-		if ( $result['response']['code'] != 200 ) {
-			wp_send_json_error( sprintf( __( 'Response: %s', 'woocommerce-gateway-mondido' ), $result['body'] ) );
-
-			return;
-		}
-
-		$transaction = json_decode( $result['body'], TRUE );
-		if ( ! isset( $transaction['id'] ) && isset( $transaction['description'] ) ) {
-			wp_send_json_error( sprintf( __( 'Error: %s', 'woocommerce-gateway-mondido' ), $transaction['description'] ) );
 
 			return;
 		}
