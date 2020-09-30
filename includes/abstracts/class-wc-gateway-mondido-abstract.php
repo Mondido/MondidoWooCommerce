@@ -64,6 +64,9 @@ abstract class WC_Gateway_Mondido_Abstract extends WC_Payment_Gateway {
 	 * @return int
 	 */
 	public function add_order_fee($fee, &$order, $qty = 1) {
+		if ($qty > 1) {
+			$fee->amount = $fee->amount / $qty;
+		}
 		for ($count = 0; $count < $qty; $count++) {
 			if ($this->is_wc3()) {
 				$item = new WC_Order_Item_Fee();
