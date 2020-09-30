@@ -1,5 +1,9 @@
 *** WooCommerce Mondido Payments Gateway Changelog ***
 
+2020-09-30 - version 4.4.1
+* use api to create transactions instead of payment form
+* show the correct amount for every subscription fee
+
 2020-09-16 - version 4.4.0
 * add card as a payment gateway
 * show the actual payment method used in thank you page and order confirmation email
