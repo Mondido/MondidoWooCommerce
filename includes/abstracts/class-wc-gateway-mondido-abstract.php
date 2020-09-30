@@ -64,24 +64,23 @@ abstract class WC_Gateway_Mondido_Abstract extends WC_Payment_Gateway {
 	 * @return int
 	 */
 	public function add_order_fee($fee, &$order, $qty = 1) {
-		if ($this->is_wc3()) {
-			$item = new WC_Order_Item_Fee();
-			$item->set_props( array(
-				'name'      => $fee->name,
-				'tax_class' => $fee->taxable ? $fee->tax_class : 0,
-				'total'     => $fee->amount,
-				'total_tax' => $fee->tax,
-				'quantity' => $qty,
-				'taxes'     => array(
-					'total' => $fee->tax_data,
-				),
-				'order_id'  => $order->get_id(),
-			) );
-			$item->save();
+		for ($count = 0; $count < $qty; $count++) {
+			if ($this->is_wc3()) {
+				$item = new WC_Order_Item_Fee();
+				$item->set_props( array(
+					'name'      => $fee->name,
+					'tax_class' => $fee->taxable ? $fee->tax_class : 0,
+					'total'     => $fee->amount,
+					'total_tax' => $fee->tax,
+					'taxes'     => array(
+						'total' => $fee->tax_data,
+					),
+					'order_id'  => $order->get_id(),
+				) );
+				$item->save();
 
-			$order->add_item( $item );
-		} else {
-			for ($count = 0; $count < $qty; $count++) {
+				$order->add_item( $item );
+			} else {
 				$order->add_fee( $fee );
 			}
 		}
