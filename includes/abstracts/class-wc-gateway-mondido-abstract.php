@@ -92,7 +92,9 @@ abstract class WC_Gateway_Mondido_Abstract extends WC_Payment_Gateway {
 	public function lookupTransaction( $transaction_id ) {
 		$transaction = $this->transaction->get($transaction_id);
 		if (is_wp_error($transaction)) {
-			wc_add_notice( $transaction->get_error_message(), 'error' );
+			if (function_exists('wc_add_notice')) {
+				wc_add_notice( $transaction->get_error_message(), 'error' );
+			}
 			return false;
 		}
 		return json_decode(json_encode($transaction), true);
@@ -101,7 +103,9 @@ abstract class WC_Gateway_Mondido_Abstract extends WC_Payment_Gateway {
 	public function lookupTransactionByOrderId( $order_id ) {
 		$transaction = $this->transaction->get_by_reference($order_id);
 		if (is_wp_error($transaction)) {
-			wc_add_notice( $transaction->get_error_message(), 'error' );
+			if (function_exists('wc_add_notice')) {
+				wc_add_notice( $transaction->get_error_message(), 'error' );
+			}
 			return false;
 		}
 		return json_decode(json_encode($transaction), true);
