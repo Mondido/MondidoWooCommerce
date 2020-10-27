@@ -41,7 +41,7 @@ class WC_Mondido_Subscriptions {
 		global $post;
 		$plan_id = get_post_meta( get_the_ID(), '_mondido_plan_id', TRUE );
 		$include = get_post_meta( get_the_ID(), '_mondido_plan_include', TRUE );
-		$gateways = WC()->payment_gateways->get_available_payment_gateways();
+		$gateways = WC()->payment_gateways->payment_gateways();
 		$gateway = $gateways['mondido_hw'];
 		?>
 		<div id='subscription_options' class='panel woocommerce_options_panel'>

@@ -100,7 +100,7 @@ class WC_Mondido_Admin_Actions {
 
 		$order   = wc_get_order( $order_id );
 
-		$gateways = WC()->payment_gateways->get_available_payment_gateways();
+		$gateways = WC()->payment_gateways->payment_gateways();
 		$gateway = $gateways[$order->get_payment_method()];
 
 		$transaction = $gateway->captureTransaction( $transaction_id, $order->get_total() );

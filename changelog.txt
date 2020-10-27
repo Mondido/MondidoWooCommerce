@@ -1,5 +1,8 @@
 *** WooCommerce Mondido Payments Gateway Changelog ***
 
+2020-10-27 - version 4.4.2
+* fix error in subscription tab when mondido hw payment gateway is not enabled
+
 2020-09-30 - version 4.4.1
 * use api to create transactions instead of payment form
 * show the correct amount for every subscription fee
