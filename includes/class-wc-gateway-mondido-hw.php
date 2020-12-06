@@ -159,6 +159,11 @@ class WC_Gateway_Mondido_HW extends WC_Gateway_Mondido_Abstract {
 				'description' => '',
 				'default'     => 'no',
 			),
+			'order_button_text' => array(
+				'title'   => __( 'Text for "Place Order" button', 'woocommerce-gateway-mondido' ),
+				'type'    => 'text',
+				'default' => __( 'Pay with Mondido', 'woocommerce-gateway-mondido' ),
+			),
 			'logos'             => array(
 				'title'          => __( 'Logos', 'woocommerce-gateway-mondido' ),
 				'description'    => __( 'Logos on checkout', 'woocommerce-gateway-mondido' ),
@@ -175,11 +180,6 @@ class WC_Gateway_Mondido_HW extends WC_Gateway_Mondido_Abstract {
 					'invoice'    => __( 'Invoice/PartPayment', 'woocommerce-gateway-mondido' ),
 				),
 				'select_buttons' => true,
-			),
-			'order_button_text' => array(
-				'title'   => __( 'Text for "Place Order" button', 'woocommerce-gateway-mondido' ),
-				'type'    => 'text',
-				'default' => __( 'Pay with Mondido', 'woocommerce-gateway-mondido' ),
 			),
 		);
 	}

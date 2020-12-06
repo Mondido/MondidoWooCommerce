@@ -126,6 +126,7 @@ CREATE TABLE IF NOT EXISTS `{$wpdb->prefix}mondido_customers` (
 
 		include_once( dirname( __FILE__ ) . '/includes/class-wc-gateway-mondido-hw.php' );
 		include_once( dirname( __FILE__ ) . '/includes/class-wc-gateway-mondido-preselect.php' );
+		include_once( dirname( __FILE__ ) . '/includes/class-wc-gateway-mondido-card.php' );
 		include_once( dirname( __FILE__ ) . '/includes/class-wc-mondido-api.php' );
 		include_once( dirname( __FILE__ ) . '/includes/class-wc-mondido-transaction.php' );
 
@@ -134,7 +135,7 @@ CREATE TABLE IF NOT EXISTS `{$wpdb->prefix}mondido_customers` (
 		WC_Mondido_Payments::register_preselect_gateway('swish', 'Swish', 'Pay with Swish');
 		WC_Mondido_Payments::register_preselect_gateway('bank', 'Direct Bank', 'Pay with Direct Bank');
 		WC_Mondido_Payments::register_gateway( new WC_Gateway_Mondido_HW());
-		WC_Mondido_Payments::register_preselect_gateway('credit_card', 'Card', 'Pay with Card');
+		WC_Mondido_Payments::register_gateway( new WC_Gateway_Mondido_Card());
 		WC_Mondido_Payments::register_preselect_gateway('paypal', 'PayPal', 'Pay with PayPal');
 		WC_Mondido_Payments::register_preselect_gateway('invoice', 'Invoice', 'Pay with Mondido');
 	}
