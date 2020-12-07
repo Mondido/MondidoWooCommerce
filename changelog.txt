@@ -1,5 +1,9 @@
 *** WooCommerce Mondido Payments Gateway Changelog ***
 
+2020-12-07 - version 4.5.0
+* add payment logos and store card to card payment method
+* clarify what type of webhook to create
+
 2020-10-27 - version 4.4.2
 * fix error in subscription tab when mondido hw payment gateway is not enabled
 
