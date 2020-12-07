@@ -7,6 +7,8 @@ if ( ! defined( 'ABSPATH' ) ) {
 class WC_Gateway_Mondido_Card extends WC_Gateway_Mondido_Preselect {
 	public function __construct() {
 		parent::__construct('credit_card', 'Card', 'Pay with Card');
+
+		$this->store_cards = isset( $this->settings['store_cards'] ) ? $this->settings['store_cards'] : 'no';
 	}
 
 	public function init_form_fields() {
@@ -22,6 +24,13 @@ class WC_Gateway_Mondido_Card extends WC_Gateway_Mondido_Preselect {
 				'diners'     => __( 'Diners Club', 'woocommerce-gateway-mondido' ),
 			),
 			'select_buttons' => true,
+		);
+		$this->form_fields['store_cards'] = array(
+			'title'       => __( 'Allow Stored Cards', 'woocommerce-gateway-mondido' ),
+			'label'       => __( 'Allow logged in customers to save credit card profiles to use for future purchases', 'woocommerce-gateway-mondido' ),
+			'type'        => 'checkbox',
+			'description' => '',
+			'default'     => 'no',
 		);
 	}
 }

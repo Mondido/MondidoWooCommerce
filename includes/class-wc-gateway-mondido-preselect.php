@@ -47,6 +47,7 @@ class WC_Gateway_Mondido_Preselect extends WC_Gateway_Mondido_HW {
 		$this->tax_class   = isset( $this->settings['tax_class'] ) ? $this->settings['tax_class'] : 'standard';
 		$this->logos             = isset( $this->settings['logos'] ) ? $this->settings['logos'] : array();
 		$this->order_button_text = isset( $this->settings['order_button_text'] ) ? $this->settings['order_button_text'] : __( $button_text, 'woocommerce-gateway-mondido' );
+        $this->store_cards = 'no';
 
 		$this->init_hooks();
 	}
@@ -60,7 +61,7 @@ class WC_Gateway_Mondido_Preselect extends WC_Gateway_Mondido_HW {
 			'enabled'           => array(
 				'title'   => __( 'Enable/Disable', 'woocommerce-gateway-mondido' ),
 				'type'    => 'checkbox',
-				'label'   => sprintf(__( 'Enable %s', 'woocommerce-gateway-mondido' ), $method_title),
+				'label'   => sprintf(__( 'Enable %s', 'woocommerce-gateway-mondido' ), $this->method_title),
 				'default' => 'no'
 			),
 			'title'             => array(
