@@ -39,7 +39,7 @@ if ( ! defined( 'ABSPATH' ) ) {
 	<br>
 	<?php
 	echo sprintf(
-		__('WebHook URL: <a href="%s" target="_blank">%s</a>. Type: JSON. Method: POST. Event: "After a success payment"', 'woocommerce-gateway-mondido'),
+		__('WebHook URL: <a href="%s" target="_blank">%s</a>. Custom HTTP. Type: JSON. Method: POST. Event: "After a success payment"', 'woocommerce-gateway-mondido'),
 		WC()->api_request_url( get_class( $gateway ) ),
 		WC()->api_request_url( get_class( $gateway ) )
 	);
@@ -47,7 +47,7 @@ if ( ! defined( 'ABSPATH' ) ) {
     <br>
 	<?php
 	echo sprintf(
-		__('WebHook URL: <a href="%s" target="_blank">%s</a>. Type: JSON. Method: POST. Event: "When a credit card is stored"', 'woocommerce-gateway-mondido'),
+		__('WebHook URL: <a href="%s" target="_blank">%s</a>. Custom HTTP. Type: JSON. Method: POST. Event: "When a credit card is stored"', 'woocommerce-gateway-mondido'),
 		add_query_arg( 'store_card', 'true', WC()->api_request_url( get_class( $gateway ) ) ),
 		add_query_arg( 'store_card', 'true', WC()->api_request_url( get_class( $gateway ) ) )
 	);
