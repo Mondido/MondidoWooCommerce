@@ -233,7 +233,10 @@ class WC_Gateway_Mondido_HW extends WC_Gateway_Mondido_Abstract {
 		$order = wc_get_order( $order_id );
 
 		if ( $this->store_cards === 'yes' ) {
-			$token_id = isset( $_POST['wc-mondido_hw-payment-token'] ) ? wc_clean( $_POST['wc-mondido_hw-payment-token'] ) : 'new';
+			$token_key = "wc-{$this->id}-payment-token";
+			$new_card_key = "wc-{$this->id}-new-payment-method";
+
+			$token_id = isset( $_POST[$token_key] ) ? wc_clean( $_POST['token_key'] ) : 'new';
 
 			// Try to load saved token
 			if ( $token_id !== 'new' ) {
@@ -252,7 +255,7 @@ class WC_Gateway_Mondido_HW extends WC_Gateway_Mondido_Abstract {
 				}
 
 				update_post_meta( $order_id, '_mondido_use_store_card', $token->get_id() );
-			} elseif ( isset( $_POST['wc-mondido_hw-new-payment-method'] ) && $_POST['wc-mondido_hw-new-payment-method'] === 'true' ) {
+			} elseif ( isset( $_POST[$new_card_key] ) && $_POST[$new_card_key] === 'true' ) {
 				update_post_meta( $order_id, '_mondido_store_card', 1 );
 			}
 		}
