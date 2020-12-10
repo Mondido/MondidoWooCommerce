@@ -238,6 +238,9 @@ class WC_Gateway_Mondido_HW extends WC_Gateway_Mondido_Abstract {
 
 			$token_id = isset( $_POST[$token_key] ) ? wc_clean( $_POST['token_key'] ) : 'new';
 
+			delete_post_meta( $order_id, '_mondido_use_store_card');
+			delete_post_meta( $order_id, '_mondido_store_card');
+
 			// Try to load saved token
 			if ( $token_id !== 'new' ) {
 				$token = new WC_Payment_Token_Mondido( $token_id );
