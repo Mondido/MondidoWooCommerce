@@ -68,6 +68,7 @@ class WC_Mondido_Subscriptions {
 					woocommerce_wp_checkbox(
 						array(
 							'id'          => '_mondido_plan_include',
+                            'label'       => '',
 							'description' => __( 'Add product to the recurring payments', 'woocommerce-gateway-mondido' ),
 							'value'   => (string) $include,
 						)
