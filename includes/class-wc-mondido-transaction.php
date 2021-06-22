@@ -54,7 +54,7 @@ class WC_Mondido_Transaction {
 				'data_format' => 'json',
 				'type' => 'CustomHttp',
 			],
-            'payment_method' => $payment_method,
+			'payment_method' => $payment_method,
 			'hash' => md5(implode([
 				$merchant_id,
 				$payment_reference,
@@ -78,6 +78,7 @@ class WC_Mondido_Transaction {
 		$testmode,
 		$authorize,
 		$secret,
+		$payment_method,
 		$customer_reference,
 		$store_card
 	) {
@@ -105,6 +106,7 @@ class WC_Mondido_Transaction {
 			'authorize' => $this->format_bool($authorize),
 			'process' => $this->format_bool(false),
 			'items' => $items,
+			'payment_method' => $payment_method,
 			'hash' => md5(implode([
 				$merchant_id,
 				$payment_reference,

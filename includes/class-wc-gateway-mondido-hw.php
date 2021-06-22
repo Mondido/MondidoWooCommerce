@@ -279,6 +279,7 @@ class WC_Gateway_Mondido_HW extends WC_Gateway_Mondido_Abstract {
 					$this->testmode === 'yes',
 					$this->authorize === 'yes',
 					$this->secret,
+					$this->preselected_method,
 					$this->getCustomerReference($order),
 					$store_card
 				);
