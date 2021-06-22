@@ -6,11 +6,13 @@ if ( ! defined( 'ABSPATH' ) ) {
 class WC_Gateway_Mondido_HW extends WC_Gateway_Mondido_Abstract {
 
     protected $preselected_method = null;
+    protected $logger = null;
 
 	/**
 	 * Init
 	 */
 	public function __construct() {
+        $this->logger   = new WC_Logger();
 		$this->id                 = 'mondido_hw';
 		$this->has_fields         = true;
 		$this->method_title       = __( 'Mondido', 'woocommerce-gateway-mondido' );
@@ -410,7 +412,6 @@ class WC_Gateway_Mondido_HW extends WC_Gateway_Mondido_Abstract {
 		@ob_clean();
 
 		try {
-			$logger   = new WC_Logger();
 			$raw_body = file_get_contents( 'php://input' );
 			$data     = @json_decode( $raw_body, TRUE );
 			if ( ! $data ) {
@@ -441,7 +442,7 @@ class WC_Gateway_Mondido_HW extends WC_Gateway_Mondido_Abstract {
 				if ( count( $tokens ) > 0 ) {
 					$message = 'This Credit Card already stored: ' . $card_number;
 					header( sprintf( '%s %s %s', 'HTTP/1.1', '200', 'OK' ), TRUE, '200' );
-					$logger->add( $this->id, sprintf( '[%s] IPN: %s', 'SUCCESS', $message ) );
+					$this->logger->notice( $this->id, sprintf( '[%s] IPN: %s', 'SUCCESS', $message ) );
 					echo sprintf( 'IPN: %s', $message );
 				}
 
@@ -467,19 +468,19 @@ class WC_Gateway_Mondido_HW extends WC_Gateway_Mondido_Abstract {
 				// Success
 				$message = 'Stored Credit Card: ' . $card_number;
 				header( sprintf( '%s %s %s', 'HTTP/1.1', '200', 'OK' ), TRUE, '200' );
-				$logger->add( $this->id, sprintf( '[%s] IPN: %s', 'SUCCESS', $message ) );
+				$this->logger->notice( $this->id, sprintf( '[%s] IPN: %s', 'SUCCESS', $message ) );
 				echo sprintf( 'IPN: %s', $message );
 				return;
 			}
 
-			$logger->add( $this->id, var_export($data, true) );
+			$this->logger->notice( $this->id, var_export($data, true) );
 
 			if ( empty( $data['id'] ) ) {
 				throw new \Exception( 'Invalid transaction ID' );
 			}
 
 			// Log transaction details
-			$logger->add( $this->id, 'Incoming Transaction: ' . var_export( json_encode( $data, true ), true) );
+			$this->logger->notice( $this->id, 'Incoming Transaction: ' . var_export( json_encode( $data, true ), true) );
 
 			// Wait for unlock
 			$times = 0;
@@ -623,7 +624,7 @@ class WC_Gateway_Mondido_HW extends WC_Gateway_Mondido_Abstract {
 
 		// Success
 		header( sprintf( '%s %s %s', 'HTTP/1.1', '200', 'OK' ), TRUE, '200' );
-		$logger->add( $this->id, sprintf( '[%s] IPN: %s', 'SUCCESS', $message ) );
+		$this->logger->notice( $this->id, sprintf( '[%s] IPN: %s', 'SUCCESS', $message ) );
 		echo sprintf( 'IPN: %s', $message );
 		exit();
 	}
