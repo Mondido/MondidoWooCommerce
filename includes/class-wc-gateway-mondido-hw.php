@@ -12,7 +12,7 @@ class WC_Gateway_Mondido_HW extends WC_Gateway_Mondido_Abstract {
 	 * Init
 	 */
 	public function __construct() {
-        $this->logger   = new WC_Logger();
+		$this->logger             = new WC_Logger();
 		$this->id                 = 'mondido_hw';
 		$this->has_fields         = true;
 		$this->method_title       = __( 'Mondido', 'woocommerce-gateway-mondido' );

@@ -13,6 +13,7 @@ class WC_Gateway_Mondido_Preselect extends WC_Gateway_Mondido_HW {
 	 * Init
 	 */
 	public function __construct($preselected_method, $method_title, $button_text, $description = '') {
+		$this->logger             = new WC_Logger();
 		$this->id                 = "mondido_$preselected_method";
 		$this->has_fields         = TRUE;
 		$this->method_title       = __( "Mondido $method_title", 'woocommerce-gateway-mondido' );
