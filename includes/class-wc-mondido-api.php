@@ -48,6 +48,38 @@ class WC_Mondido_Api {
 		]);
 	}
 
+	public function list_plans() {
+		return $this->list_all(__METHOD__, "v1/plans", []);
+	}
+
+	public function list_customer_subscriptions($customer_id) {
+		return $this->get(__METHOD__, "v1/customers/$customer_id/subscriptions", ['extend' => 'plan']);
+	}
+
+	public function cancel_subscription($id) {
+		return $this->put(__METHOD__, "v1/subscriptions/$id", ['status' => 'cancelled']);
+	}
+
+	private function list_all($context, $path, $query) {
+		$query = $query + ['limit' => 100, 'offset' => 0];
+		$result = [];
+
+		if ($query['limit'] == 0) {
+			return $result;
+		}
+
+		do {
+			$items = $this->send_request('GET', $path, $context, $query, []);
+			if (is_wp_error($items)) {
+				return $items;
+			}
+			$result = array_merge($result, $items);
+            $query['offset'] += $query['limit'];
+		} while (count($items) === $query['limit']);
+
+		return $result;
+	}
+
 	private function get($context, $path, $query) {
 		return $this->send_request('GET', $path, $context, $query, []);
 	}

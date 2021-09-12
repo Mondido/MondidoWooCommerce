@@ -110,11 +110,6 @@ CREATE TABLE IF NOT EXISTS `{$wpdb->prefix}mondido_customers` (
 	public function init() {
 		// Localization
 		load_plugin_textdomain( 'woocommerce-gateway-mondido', FALSE, dirname( plugin_basename( __FILE__ ) ) . '/languages' );
-
-		// Includes
-		include_once( dirname( __FILE__ ) . '/includes/class-wc-mondido-admin-actions.php' );
-		include_once( dirname( __FILE__ ) . '/includes/class-wc-mondido-subscriptions.php' );
-		include_once( dirname( __FILE__ ) . '/includes/class-wc-mondido-subscriptions-account.php' );
 	}
 
 	/**
@@ -129,6 +124,10 @@ CREATE TABLE IF NOT EXISTS `{$wpdb->prefix}mondido_customers` (
 		include_once( dirname( __FILE__ ) . '/includes/class-wc-gateway-mondido-card.php' );
 		include_once( dirname( __FILE__ ) . '/includes/class-wc-mondido-api.php' );
 		include_once( dirname( __FILE__ ) . '/includes/class-wc-mondido-transaction.php' );
+
+		include_once( dirname( __FILE__ ) . '/includes/class-wc-mondido-admin-actions.php' );
+		include_once( dirname( __FILE__ ) . '/includes/class-wc-mondido-subscriptions.php' );
+		include_once( dirname( __FILE__ ) . '/includes/class-wc-mondido-subscriptions-account.php' );
 
 		include_once( dirname( __FILE__ ) . '/includes/class-wc-payment-token-mondido.php' );
 
@@ -180,14 +179,20 @@ CREATE TABLE IF NOT EXISTS `{$wpdb->prefix}mondido_customers` (
 	 * @param string $class_name
 	 */
 	private static function register_gateway( $gateway ) {
-		$transaction = new WC_Mondido_Transaction(new WC_Mondido_Api(
+        $api = new WC_Mondido_Api(
 			$gateway->merchant_id,
 			$gateway->password,
 			new WP_Http(),
 			new WC_Logger(),
 			$gateway->id
-		));
-		$gateway->add_dependencies($transaction);
+		);
+
+		if (get_class($gateway) === WC_Gateway_Mondido_HW::class) {
+			new WC_Mondido_Subscriptions_Account($api, $gateway);
+			new WC_Mondido_Subscriptions($api);
+		}
+
+		$gateway->add_dependencies($api, new WC_Mondido_Transaction($api));
 
 		// Register gateway instance
 		add_filter( 'woocommerce_payment_gateways', function ( $methods ) use ( $gateway ) {

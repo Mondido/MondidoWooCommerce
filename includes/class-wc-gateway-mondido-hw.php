@@ -6,7 +6,6 @@ if ( ! defined( 'ABSPATH' ) ) {
 class WC_Gateway_Mondido_HW extends WC_Gateway_Mondido_Abstract {
 
     protected $preselected_method = null;
-    protected $logger = null;
 
 	/**
 	 * Init
