@@ -33,7 +33,7 @@ class WC_Mondido_Transaction {
 			return $subscriptions;
 		}
 
-		$data = array_merge([
+		return $this->api->create_transaction(array_merge([
 			'amount' => $amount,
 			'vat_amount' => 0,
 			'merchant_id' => $merchant_id,
@@ -66,9 +66,7 @@ class WC_Mondido_Transaction {
 			])),
 			'metadata' => $this->get_metadata($order, $customer_reference, $customer_data, $items, $payment_mode, $payment_view),
 			'payment_details' => $this->map_payment_details($customer_data),
-		], $subscriptions);
-
-		return $this->api->create_transaction($data);
+		], $subscriptions));
 	}
 
 	public function update(
@@ -229,6 +227,7 @@ class WC_Mondido_Transaction {
 			'country' => $order_country,
 			'state' => $order->get_billing_state(),
 			'email' => $order->get_billing_email(),
+			'company_name' => $order->get_billing_company(),
 		];
 	}
 
@@ -243,11 +242,12 @@ class WC_Mondido_Transaction {
 			'address_2' => $customer_data['address2'],
 			'city' => $customer_data['city'],
 			'country_code' => $customer_data['country'],
+			'company_name' => $customer_data['company_name'],
 		];
 	}
 
 	private function get_metadata($order, $customer_reference, $customer_data, $items) {
-		return [
+		$metadata = [
 			'store_order' => ['id' => $order->get_id()],
 			'customer_reference' => $customer_reference,
 			'products' => $items,
@@ -265,6 +265,8 @@ class WC_Mondido_Transaction {
 				'plugin_version' => $this->get_plugin_version(),
 			],
 		];
+		$metadata['extra'] = apply_filters('woocommerce_mondido_get_metadata_extra', [], $metadata);
+		return $metadata;
 	}
 
 	private function get_subscriptions($order) {

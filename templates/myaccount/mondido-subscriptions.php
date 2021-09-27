@@ -41,16 +41,23 @@
 		</thead>
 		<tbody>
 		<?php foreach ($subscriptions as $subscription): ?>
-			<?php if ($subscription['status'] === 'active'): ?>
 			<tr>
 				<td>
-					<?php echo WC_Mondido_Subscriptions_Account::formatSubscriptionDescription( $subscription ); ?>
+					<?php printf(
+						__('%s %s (Subscription #%s)', 'woocommerce-gateway-mondido'),
+						$subscription->plan->name,
+						(!empty($subscription->plan->description) ? "({$subscription->plan->description})" : ''),
+						$subscription->id
+					); ?>
 				</td>
 				<td>
-                    <a href="#" data-id="<?php echo esc_attr( $subscription['id'] ); ?>" data-nonce="<?php echo wp_create_nonce( 'mondido_subscriptions' ); ?>" class="button view mondido-cancel"><?php _e( 'Cancel', 'woocommerce-gateway-mondido' ); ?></a>
+					<?php if ($subscription->status === 'active'): ?>
+						<a href="#" data-id="<?php echo esc_attr( $subscription->id ); ?>" data-nonce="<?php echo wp_create_nonce( 'mondido_subscriptions' ); ?>" class="button view mondido-cancel"><?php _e( 'Cancel', 'woocommerce-gateway-mondido' ); ?></a>
+					<?php else: ?>
+						<?php echo __($subscription->status, 'woocommerce-gateway-mondido'); ?>
+					<?php endif; ?>
 				</td>
 			</tr>
-			<?php endif; ?>
 		<?php endforeach; ?>
 		</tbody>
 	</table>
