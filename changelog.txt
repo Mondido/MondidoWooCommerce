@@ -1,5 +1,13 @@
 *** WooCommerce Mondido Payments Gateway Changelog ***
 
+2021-09-27 - version 4.6.0
+* Fix the limit of listing 10 plans in the admin product page
+* Mark inactive plans and put them last in the admin product page
+* Show cancelled subscriptions in customers subscription list
+* Hide the subscription tab in customers account page if they have no subscriptions
+* Add filter for metadata, to allow merchants to modify before sending it to backend
+* Add company name to the transaction
+
 2021-03-24 - version 4.5.0
 * add payment logos and store card to card payment method
 * update logo for trustly
