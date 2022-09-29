@@ -48,7 +48,7 @@ class WC_Mondido_Subscriptions {
 		$error = null;
 
 		if (is_wp_error($plans)) {
-			$error = implode( $plans->errors['http_request_failed'] );
+			//$error = implode( $plans->errors['http_request_failed'] );
 			$plans = [];
 		}
 
