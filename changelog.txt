@@ -1,5 +1,8 @@
 *** WooCommerce Mondido Payments Gateway Changelog ***
 
+2021-09-30 - version 4.6.1
+* Subscription patch
+
 2021-09-27 - version 4.6.0
 * Fix the limit of listing 10 plans in the admin product page
 * Mark inactive plans and put them last in the admin product page
