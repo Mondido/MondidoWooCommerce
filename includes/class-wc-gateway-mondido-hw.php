@@ -660,7 +660,11 @@ class WC_Gateway_Mondido_HW extends WC_Gateway_Mondido_Abstract {
 		}
 		
 		$active_logos = array();
-		
+
+		if (!is_array($this->logos)) {
+			return $active_logos;
+		}
+
 		foreach (array_keys($this->form_fields['logos']['options']) as $logo) {
 			if (in_array($logo, $this->logos, true)) {
 				$active_logos[] = $logo;
