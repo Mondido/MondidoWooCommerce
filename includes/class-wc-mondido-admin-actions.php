@@ -105,8 +105,7 @@ class WC_Mondido_Admin_Actions {
 
 		$transaction = $gateway->captureTransaction( $transaction_id, $order->get_total() );
 		if ( is_wp_error( $transaction ) ) {
-			$error = implode( $transaction->errors['http_request_failed'] );
-			wp_send_json_error( sprintf( __( 'Error: %s', 'woocommerce-gateway-mondido' ), $error ) );
+			wp_send_json_error( sprintf( __( 'Error: %s', 'woocommerce-gateway-mondido' ), implode($transaction->get_error_messages()) ) );
 
 			return;
 		}
