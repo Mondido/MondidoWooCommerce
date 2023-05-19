@@ -24,8 +24,8 @@ if ( ! defined( 'ABSPATH' ) ) {
 	<?php
 	echo sprintf(
 		__('All settings below can be found at this location: <a href="%s" target="_blank">%s</a> after you have logged in.', 'woocommerce-gateway-mondido'),
-		'https://admin.mondido.com/en/settings',
-		'https://admin.mondido.com/en/settings'
+		'https://admin.mondido.com/en/integrations',
+		'https://admin.mondido.com/en/integrations'
 	);
 	?>
 </p>
