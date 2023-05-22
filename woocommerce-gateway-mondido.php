@@ -5,7 +5,7 @@
  * Description: Provides a Payment Gateway through Mondido for WooCommerce.
  * Author: Mondido
  * Author URI: https://www.mondido.com/
- * Version: 4.6.1
+ * Version: 4.6.2
  * Text Domain: woocommerce-gateway-mondido
  * Domain Path: /languages
  * WC requires at least: 3.0.0
