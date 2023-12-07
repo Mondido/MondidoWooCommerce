@@ -504,6 +504,12 @@ class WC_Gateway_Mondido_HW extends WC_Gateway_Mondido_Abstract {
 				throw new \Exception('Failed to lookup transaction' . implode(',', $transaction_data->get_error_messages()));
 			}
 
+			$converted = json_decode(json_encode($transaction_data), true);
+			if ($converted == null) {
+				throw new \Exception('Failed to convert transaction' . (string) $transaction_data);
+			}
+			$transaction_data = $converted;
+
 			switch ( $transaction_data['transaction_type'] ) {
 				case 'recurring':
 					// Recurring Transactions
