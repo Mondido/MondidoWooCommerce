@@ -499,9 +499,9 @@ class WC_Gateway_Mondido_HW extends WC_Gateway_Mondido_Abstract {
 			clean_post_cache( $data['payment_ref'] );
 
 			// Lookup transaction
-			$transaction_data = $this->lookupTransaction( $data['id'] );
-			if ( ! $transaction_data ) {
-				throw new \Exception('Failed to lookup transaction');
+			$transaction_data = $this->transaction->get($data['id']);
+			if (is_wp_error($transaction_data)) {
+				throw new \Exception('Failed to lookup transaction' . implode(',', $transaction_data->get_error_messages()));
 			}
 
 			switch ( $transaction_data['transaction_type'] ) {
