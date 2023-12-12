@@ -113,7 +113,7 @@ class WC_Mondido_Api {
 			}
 
 			if (json_last_error() !== JSON_ERROR_NONE) {
-				$error->add($context, 'invalid response data', json_last_error_msg());
+				$error->add($context, 'invalid response data: ' . $response['response']['code'] . ' ' . json_last_error_msg() . ' ' . $response['body'], json_last_error_msg());
 			}
 
 			if (!$error->has_errors()) {
