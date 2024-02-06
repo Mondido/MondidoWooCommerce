@@ -4,6 +4,8 @@ if ( ! defined( 'ABSPATH' ) ) {
 	exit;
 } // Exit if accessed directly
 
+use Automattic\WooCommerce\Utilities\OrderUtil;
+
 /**
  * Compatibility Layer for WC_Order on WooCommerce < 3.0
  * @see https://woocommerce.wordpress.com/2017/04/04/say-hello-to-woocommerce-3-0-bionic-butterfly/
@@ -52,12 +54,25 @@ class WC_Order_Compatibility_Mondido {
 	 */
 	public function __construct( $the_order ) {
 		global $post;
+		global $post_id;
 		if ( FALSE === $the_order ) {
 			$the_order = $post;
 		} elseif ( is_numeric( $the_order ) ) {
-			$the_order = get_post( $the_order );
+			if ( OrderUtil::custom_orders_table_usage_is_enabled() ) {
+				// HPOS usage is enabled.
+				$the_order = wc_get_order( $post_id );
+			} else {
+				// Traditional CPT-based orders are in use.
+				$the_order = get_post( $the_order );
+			}
 		} elseif ( $the_order instanceof WC_Order ) {
-			$the_order = get_post( $the_order->id );
+			if ( OrderUtil::custom_orders_table_usage_is_enabled() ) {
+				// HPOS usage is enabled.
+				$the_order = wc_get_order( $post_id );
+			} else {
+				// Traditional CPT-based orders are in use.
+				$the_order = get_post( $the_order->id );
+			}
 		}
 
 		if ( ! $the_order || ! is_object( $the_order ) ) {

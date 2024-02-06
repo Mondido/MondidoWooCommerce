@@ -4,6 +4,8 @@ if ( ! defined( 'ABSPATH' ) ) {
 	exit;
 } // Exit if accessed directly
 
+use Automattic\WooCommerce\Utilities\OrderUtil;
+
 class WC_Mondido_Subscriptions {
 
 	private $api;
@@ -86,14 +88,23 @@ class WC_Mondido_Subscriptions {
 	 */
 	public function save_subscription_field() {
 		global $post_id;
+		$order = wc_get_order( $post_id );
 
 		if ( empty( $post_id ) ) {
 			return;
 		}
 
 		if ( isset( $_POST['_mondido_plan_id'] ) ) {
-			update_post_meta( $post_id, '_mondido_plan_id', $_POST['_mondido_plan_id'] );
-			update_post_meta( $post_id, '_mondido_plan_include', $_POST['_mondido_plan_include'] );
+			if ( OrderUtil::custom_orders_table_usage_is_enabled() ) {
+				// HPOS usage is enabled.
+				$order->update_meta_data( '_mondido_plan_id', $_POST['_mondido_plan_id'] );
+				$order->update_meta_data( '_mondido_plan_include', $_POST['_mondido_plan_include'] );
+				$order->save();
+			} else {
+				// Traditional CPT-based orders are in use.
+				update_post_meta( $post_id, '_mondido_plan_id', $_POST['_mondido_plan_id'] );
+				update_post_meta( $post_id, '_mondido_plan_include', $_POST['_mondido_plan_include'] );
+			}
 		}
 	}
 

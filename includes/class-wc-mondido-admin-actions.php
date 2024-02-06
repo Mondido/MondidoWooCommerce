@@ -3,6 +3,9 @@ if ( ! defined( 'ABSPATH' ) ) {
 	exit;
 } // Exit if accessed directly
 
+use Automattic\WooCommerce\Utilities\OrderUtil;
+use Automattic\WooCommerce\Internal\DataStores\Orders\CustomOrdersTableController;
+
 class WC_Mondido_Admin_Actions {
 	/**
 	 * Constructor
@@ -30,11 +33,15 @@ class WC_Mondido_Admin_Actions {
 		if ( $order && strpos( $order->get_payment_method(), 'mondido' ) !== false ) {
 			$transaction = get_post_meta( $order->get_id(), '_mondido_transaction_data', TRUE );
 			if ( ! empty( $transaction ) ) {
+				$screen = class_exists( '\Automattic\WooCommerce\Internal\DataStores\Orders\CustomOrdersTableController' ) && wc_get_container()->get( CustomOrdersTableController::class )->custom_orders_table_usage_is_enabled()
+					? wc_get_page_screen_id( 'shop-order' )
+					: 'shop_order';
+
 				add_meta_box(
 					'mondido_payment_actions',
 					__( 'Mondido Payments', 'woocommerce-gateway-mondido' ),
 					__CLASS__ . '::order_meta_box_payment_actions',
-					'shop_order',
+					$screen,
 					'side',
 					'default'
 				);
@@ -46,9 +53,9 @@ class WC_Mondido_Admin_Actions {
 	 * MetaBox for Payment Actions
 	 * @return void
 	 */
-	public static function order_meta_box_payment_actions() {
+	public static function order_meta_box_payment_actions( $post_or_order_object ) {
 		global $post_id;
-		$order       = wc_get_order( $post_id );
+		$order = ( $post_or_order_object instanceof WP_Post ) ? wc_get_order( $post_or_order_object->ID ) : $post_or_order_object;
 		$transaction = get_post_meta( $order->get_id(), '_mondido_transaction_data', TRUE );
 
 		wc_get_template(
@@ -111,10 +118,19 @@ class WC_Mondido_Admin_Actions {
 		}
 
 		if ( $transaction['status'] === 'approved' ) {
-			// Save Transaction
-			update_post_meta( $order->get_id(), '_transaction_id', $transaction['id'] );
-			update_post_meta( $order->get_id(), '_mondido_transaction_status', $transaction['status'] );
-			update_post_meta( $order->get_id(), '_mondido_transaction_data', $transaction );
+			if ( OrderUtil::custom_orders_table_usage_is_enabled() ) {
+				// HPOS usage is enabled.
+				$order->update_meta_data( '_transaction_id', $transaction['id'] );
+				$order->update_meta_data( '_mondido_transaction_status', $transaction['status'] );
+				$order->update_meta_data( '_mondido_transaction_data', $transaction );
+				$order->save();
+			} else {
+				// Traditional CPT-based orders are in use.
+				// Save Transaction
+				update_post_meta( $order->get_id(), '_transaction_id', $transaction['id'] );
+				update_post_meta( $order->get_id(), '_mondido_transaction_status', $transaction['status'] );
+				update_post_meta( $order->get_id(), '_mondido_transaction_data', $transaction );
+			}
 
 			$order->add_order_note( sprintf( __( 'Payment captured. Transaction Id: %s', 'woocommerce-gateway-mondido' ), $transaction['id'] ) );
 			$order->payment_complete( $transaction['id'] );
