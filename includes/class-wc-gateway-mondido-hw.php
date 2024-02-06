@@ -3,6 +3,8 @@ if ( ! defined( 'ABSPATH' ) ) {
 	exit;
 } // Exit if accessed directly
 
+use Automattic\WooCommerce\Utilities\OrderUtil;
+
 class WC_Gateway_Mondido_HW extends WC_Gateway_Mondido_Abstract {
 
     protected $preselected_method = null;
@@ -238,9 +240,18 @@ class WC_Gateway_Mondido_HW extends WC_Gateway_Mondido_Abstract {
 			$new_card_key = "wc-{$this->id}-new-payment-method";
 
 			$token_id = isset( $_POST[$token_key] ) ? wc_clean( $_POST['token_key'] ) : 'new';
+		
 
-			delete_post_meta( $order_id, '_mondido_use_store_card');
-			delete_post_meta( $order_id, '_mondido_store_card');
+			if ( OrderUtil::custom_orders_table_usage_is_enabled() ) {
+				// HPOS usage is enabled.
+				$order->delete_meta_data('_mondido_use_store_card');
+				$order->delete_post_meta('_mondido_store_card');
+				$order->save();
+			} else {
+				// Traditional CPT-based orders are in use.
+				delete_post_meta( $order_id, '_mondido_use_store_card' );
+				delete_post_meta( $order_id, '_mondido_store_card' );
+			}
 
 			// Try to load saved token
 			if ( $token_id !== 'new' ) {
@@ -258,9 +269,23 @@ class WC_Gateway_Mondido_HW extends WC_Gateway_Mondido_Abstract {
 					return false;
 				}
 
-				update_post_meta( $order_id, '_mondido_use_store_card', $token->get_id() );
+				if ( OrderUtil::custom_orders_table_usage_is_enabled() ) {
+					// HPOS usage is enabled.
+					$order->update_meta_data('_mondido_use_store_card', $token->get_id());
+					$order->save();
+				} else {
+					// Traditional CPT-based orders are in use.
+					update_post_meta( $order_id, '_mondido_use_store_card', $token->get_id() );
+				}
 			} elseif ( isset( $_POST[$new_card_key] ) && $_POST[$new_card_key] === 'true' ) {
-				update_post_meta( $order_id, '_mondido_store_card', 1 );
+				if ( OrderUtil::custom_orders_table_usage_is_enabled() ) {
+					// HPOS usage is enabled.
+					$order->update_meta_data('_mondido_store_card', 1);
+					$order->save();
+				} else {
+					// Traditional CPT-based orders are in use.
+					update_post_meta( $order_id, '_mondido_store_card', 1 );
+				}
 			}
 		}
 
@@ -299,7 +324,14 @@ class WC_Gateway_Mondido_HW extends WC_Gateway_Mondido_Abstract {
 			);
 
 			if (!is_wp_error($transaction)) {
-				update_post_meta( $order_id, '_transaction_id', $transaction->id );
+				if ( OrderUtil::custom_orders_table_usage_is_enabled() ) {
+					// HPOS usage is enabled.
+					$order->update_meta_data('_transaction_id', $transaction->id);
+					$order->save();
+				} else {
+					// Traditional CPT-based orders are in use.
+					update_post_meta( $order_id, '_transaction_id', $transaction->id );
+				}
 			}
 
 		}
@@ -523,11 +555,21 @@ class WC_Gateway_Mondido_HW extends WC_Gateway_Mondido_Abstract {
 						'total'         => $transaction_data['amount'],
 						'created_via'   => 'mondido',
 					) );
-					add_post_meta( $order->get_id(), '_payment_method', $this->id );
-					update_post_meta( $order->get_id(), '_transaction_id', $transaction_data['id'] );
-					update_post_meta( $order->get_id(), '_mondido_transaction_status', $transaction_data['status'] );
-					update_post_meta( $order->get_id(), '_mondido_transaction_data', $transaction_data );
-					update_post_meta( $order->get_id(), '_mondido_subscription_id', $transaction_data['subscription']['id'] );
+					if ( OrderUtil::custom_orders_table_usage_is_enabled() ) {
+						// HPOS usage is enabled.
+						$order->add_meta_data('_payment_method', $this->id);
+						$order->update_meta_data('_transaction_id', $transaction_data['id']);
+						$order->update_meta_data('_mondido_transaction_status', $transaction_data['status']);
+						$order->update_meta_data('_mondido_transaction_data', $transaction_data);
+						$order->update_meta_data('_mondido_subscription_id', $transaction_data['subscription']['id']);
+					} else {
+						// Traditional CPT-based orders are in use.
+						add_post_meta( $order->get_id(), '_payment_method', $this->id );
+						update_post_meta( $order->get_id(), '_transaction_id', $transaction_data['id'] );
+						update_post_meta( $order->get_id(), '_mondido_transaction_status', $transaction_data['status'] );
+						update_post_meta( $order->get_id(), '_mondido_transaction_data', $transaction_data );
+						update_post_meta( $order->get_id(), '_mondido_subscription_id', $transaction_data['subscription']['id'] );
+					}
 
 					// Add address
 					$order->set_address( $transaction_data['metadata']['customer'], 'billing' );
