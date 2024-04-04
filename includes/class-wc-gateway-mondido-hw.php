@@ -473,14 +473,14 @@ class WC_Gateway_Mondido_HW extends WC_Gateway_Mondido_Abstract {
 				return;
 			}
 
-			$this->logger->notice( $this->id, var_export($data, true) );
+			$this->logger->notice( $this->id, $data );
 
 			if ( empty( $data['id'] ) ) {
 				throw new \Exception( 'Invalid transaction ID' );
 			}
 
 			// Log transaction details
-			$this->logger->notice( $this->id, 'Incoming Transaction: ' . var_export( json_encode( $data, true ), true) );
+			$this->logger->notice( $this->id, array('message' => 'Incoming Transaction', 'data' => $data) );
 
 			// Wait for unlock
 			$times = 0;
@@ -630,7 +630,7 @@ class WC_Gateway_Mondido_HW extends WC_Gateway_Mondido_Abstract {
 
 		// Success
 		header( sprintf( '%s %s %s', 'HTTP/1.1', '200', 'OK' ), TRUE, '200' );
-		$this->logger->notice( $this->id, sprintf( '[%s] IPN: %s', 'SUCCESS', $message ) );
+		$this->logger->notice($this->id, array('status' => '[SUCCESS] IPN', 'message' => $message));
 		echo sprintf( 'IPN: %s', $message );
 		exit();
 	}
