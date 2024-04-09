@@ -31,6 +31,11 @@ class WC_Mondido_Payments {
 		register_deactivation_hook( __FILE__, array( $this, 'flush_rewrite_rules' ) );
 
 		// Actions
+		add_action( 'before_woocommerce_init', function() {
+			if ( class_exists( \Automattic\WooCommerce\Utilities\FeaturesUtil::class ) ) {
+				\Automattic\WooCommerce\Utilities\FeaturesUtil::declare_compatibility( 'custom_order_tables', __FILE__, true );
+			}
+		} );
 		add_filter( 'plugin_action_links_' . plugin_basename( __FILE__ ), array(
 			$this,
 			'plugin_action_links'

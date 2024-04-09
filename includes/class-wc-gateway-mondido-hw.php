@@ -6,6 +6,7 @@ if ( ! defined( 'ABSPATH' ) ) {
 class WC_Gateway_Mondido_HW extends WC_Gateway_Mondido_Abstract {
 
     protected $preselected_method = null;
+	protected $orderStorage;
 
 	/**
 	 * Init
@@ -16,6 +17,7 @@ class WC_Gateway_Mondido_HW extends WC_Gateway_Mondido_Abstract {
 		$this->has_fields         = true;
 		$this->method_title       = __( 'Mondido', 'woocommerce-gateway-mondido' );
 		$this->method_description = '';
+		$this->orderStorage	   	  = OrderStorageTechnology::current();
 
 		$this->icon     = apply_filters( 'woocommerce_mondido_hw_icon', plugins_url( '/assets/images/mondido.png', dirname( __FILE__ ) ) );
 		$this->supports = array(
@@ -232,7 +234,6 @@ class WC_Gateway_Mondido_HW extends WC_Gateway_Mondido_Abstract {
 	 */
 	public function process_payment( $order_id ) {
 		$order = wc_get_order( $order_id );
-		$orderStorage = OrderStorageTechnology::current();
 
 		if ( $this->store_cards === 'yes' ) {
 			$token_key = "wc-{$this->id}-payment-token";
@@ -240,9 +241,9 @@ class WC_Gateway_Mondido_HW extends WC_Gateway_Mondido_Abstract {
 
 			$token_id = isset( $_POST[$token_key] ) ? wc_clean( $_POST['token_key'] ) : 'new';
 
-			$orderStorage->delete_meta_data($order, '_mondido_use_store_card');
+			$this->orderStorage->delete_meta_data($order, '_mondido_use_store_card');
 			$order->delete_meta_data($order, '_mondido_store_card');
-			$orderStorage->save( $order );
+			$this->orderStorage->save( $order );
 
 			// Try to load saved token
 			if ( $token_id !== 'new' ) {
@@ -259,16 +260,16 @@ class WC_Gateway_Mondido_HW extends WC_Gateway_Mondido_Abstract {
 
 					return false;
 				}
-				$orderStorage->update_meta_data($order, '_mondido_use_store_card', $token->get_id());
-				$orderStorage->save( $order );
+				$this->orderStorage->update_meta_data($order, '_mondido_use_store_card', $token->get_id());
+				$this->orderStorage->save( $order );
 			} elseif ( isset( $_POST[$new_card_key] ) && $_POST[$new_card_key] === 'true' ) {
-				$orderStorage->update_meta_data($order, '_mondido_store_card', 1);
-				$orderStorage->save( $order );
+				$this->orderStorage->update_meta_data($order, '_mondido_store_card', 1);
+				$this->orderStorage->save( $order );
 			}
 		}
 
 		$transaction_id = $order->get_transaction_id();
-		$store_card = (bool) $orderStorage->get_meta($order, '_mondido_store_card', true);
+		$store_card = (bool) $this->orderStorage->get_meta($order, '_mondido_store_card', true);
 
 		if ($transaction_id) {
 			$transaction = $this->transaction->get($transaction_id);
@@ -302,8 +303,8 @@ class WC_Gateway_Mondido_HW extends WC_Gateway_Mondido_Abstract {
 			);
 
 			if (!is_wp_error($transaction)) {
-				$orderStorage->update_meta_data($order, '_transaction_id', $transaction->id);
-				$orderStorage->save( $order );
+				$this->orderStorage->update_meta_data($order, '_transaction_id', $transaction->id);
+				$this->orderStorage->save( $order );
 			}
 
 		}
@@ -527,15 +528,12 @@ class WC_Gateway_Mondido_HW extends WC_Gateway_Mondido_Abstract {
 						'total'         => $transaction_data['amount'],
 						'created_via'   => 'mondido',
 					) );
-					$orderStorage = OrderStorageTechnology::current();
 
-					$orderStorage->add_meta_data($order, '_payment_method', $this->id);
-					$orderStorage->update_meta_data($order, '_transaction_id', $transaction_data['id']);
-					$orderStorage->update_meta_data($order, '_mondido_transaction_status', $transaction_data['status']);
-					$orderStorage->update_meta_data($order, '_mondido_transaction_data', $transaction_data);
-					$orderStorage->update_meta_data($order, '_mondido_subscription_id', $transaction_data['subscription']['id']);
-
-					wc_get_logger()->info('test 5');
+					$this->orderStorage->add_meta_data($order, '_payment_method', $this->id);
+					$this->orderStorage->update_meta_data($order, '_transaction_id', $transaction_data['id']);
+					$this->orderStorage->update_meta_data($order, '_mondido_transaction_status', $transaction_data['status']);
+					$this->orderStorage->update_meta_data($order, '_mondido_transaction_data', $transaction_data);
+					$this->orderStorage->update_meta_data($order, '_mondido_subscription_id', $transaction_data['subscription']['id']);
 
 					// Add address
 					$order->set_address( $transaction_data['metadata']['customer'], 'billing' );
