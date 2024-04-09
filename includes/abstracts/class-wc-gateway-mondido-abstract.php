@@ -10,10 +10,12 @@ abstract class WC_Gateway_Mondido_Abstract extends WC_Payment_Gateway {
 	protected $api;
 	protected $transaction;
 	protected $logger;
+	protected $orderStorage;
 
 	public function add_dependencies(WC_Mondido_Api $api, WC_Mondido_Transaction $transaction) {
 		$this->api = $api;
 		$this->transaction = $transaction;
+		$this->orderStorage = OrderStorageTechnology::current();
 	}
 
 	/**
@@ -333,37 +335,22 @@ abstract class WC_Gateway_Mondido_Abstract extends WC_Payment_Gateway {
 
 		// Check transaction was processed
 		$current_transaction_id = $order->get_transaction_id();
-		$current_status = get_post_meta( $order_id, '_mondido_transaction_status', true );
+		$current_status = $this->orderStorage->get_meta( $order, '_mondido_transaction_status', true );
+
 		if ( $current_transaction_id === $transaction_id && $current_status === $status ) {
 			throw new \Exception( "Transaction already applied. Order ID: {$order_id}. Transaction ID: {$transaction_id}. Transaction status: {$status}" );
 		}
 
-
-		if ( OrderUtil::custom_orders_table_usage_is_enabled() ) {
-			// HPOS usage is enabled.
-			$order->delete_meta_data( '_transaction_id' );
-			$order->update_meta_data( '_transaction_id', $transaction_id );
-
-			$order->delete_meta_data( '_mondido_transaction_status' );
-			$order->update_meta_data( '_mondido_transaction_status', $status );
-
-			$order->delete_meta_data( '_mondido_transaction_data' );
-			$order->update_meta_data( '_mondido_transaction_data', $transaction_data );
-
-			$order->save();
-		} else {
-			// Traditional CPT-based orders are in use.
-			// Save Transaction
-			delete_post_meta( $order_id, '_transaction_id' );
-			update_post_meta( $order_id, '_transaction_id', $transaction_id );
-	
-			delete_post_meta( $order_id, '_mondido_transaction_status' );
-			update_post_meta( $order_id, '_mondido_transaction_status', $status );
-	
-			delete_post_meta( $order_id, '_mondido_transaction_data' );
-			update_post_meta( $order_id, '_mondido_transaction_data', $transaction_data );
-		}
+		$this->orderStorage->delete_meta_data( $order, '_transaction_id' );
+		$this->orderStorage->update_meta_data( $order, '_transaction_id', $transaction_id );
 		
+		$this->orderStorage->delete_meta_data( $order, '_mondido_transaction_status' );
+		$this->orderStorage->update_meta_data( $order, '_mondido_transaction_status', $status );
+
+		$this->orderStorage->delete_meta_data( $order, '_mondido_transaction_data' );
+		$this->orderStorage->update_meta_data( $order, '_mondido_transaction_data', $transaction_data );
+
+		$this->orderStorage->save( $order );
 
 		switch ( $status ) {
 			case 'pending':
@@ -407,17 +394,13 @@ abstract class WC_Gateway_Mondido_Abstract extends WC_Payment_Gateway {
                 'postcode'   => $details['zip'],
                 'country'    => $this->get_country_alpha2( $details['country_code'] ),
             );
-			if ( OrderUtil::custom_orders_table_usage_is_enabled() ) {
-				// HPOS usage is enabled.
-				$order->update_meta_data( '_mondido_invoice_address', $address );
-			} else {
-				// Traditional CPT-based orders are in use.
-				update_post_meta( $order_id, '_mondido_invoice_address', $address );
-			}
-        }
+		}
+
+		$this->orderStorage->update_meta_data( $order, '_mondido_invoice_address', $address );
+		$this->orderStorage->save( $order );
 
         // Define address for Mondido Checkout
-        if ( (bool) get_post_meta( $order_id, '_mondido_checkout', TRUE ) ) {
+        if ( (bool) $this->orderStorage->get_meta( $order, '_mondido_checkout', TRUE ) ) {
             $order->set_address( $address, 'billing' );
 
             if ( $order->needs_shipping_address() ) {
@@ -581,7 +564,7 @@ abstract class WC_Gateway_Mondido_Abstract extends WC_Payment_Gateway {
 
 	public function get_payment_method_name($value, $order, $default_value)
 	{
-		$transaction = get_post_meta( $order->get_id(), '_mondido_transaction_data', TRUE );
+		$transaction = $this->orderStorage->get_meta( $order, '_mondido_transaction_data', TRUE );
 
 		if (!$transaction) {
 			if ($order->get_transaction_id()) {

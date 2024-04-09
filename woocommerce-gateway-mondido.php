@@ -124,6 +124,7 @@ CREATE TABLE IF NOT EXISTS `{$wpdb->prefix}mondido_customers` (
 		include_once( dirname( __FILE__ ) . '/includes/class-wc-gateway-mondido-card.php' );
 		include_once( dirname( __FILE__ ) . '/includes/class-wc-mondido-api.php' );
 		include_once( dirname( __FILE__ ) . '/includes/class-wc-mondido-transaction.php' );
+		include_once( dirname( __FILE__ ) . '/includes/class-wc-mondido-hpos-compatibility.php' );
 
 		include_once( dirname( __FILE__ ) . '/includes/class-wc-mondido-admin-actions.php' );
 		include_once( dirname( __FILE__ ) . '/includes/class-wc-mondido-subscriptions.php' );
