@@ -54,7 +54,7 @@ class WC_Order_Compatibility_Mondido {
 	 */
 	public function __construct( $the_order ) {
 		global $post;
-		global $post_id;
+
 		if ( FALSE === $the_order ) {
 			$the_order = $post;
 		} elseif ( is_numeric( $the_order ) ) {
