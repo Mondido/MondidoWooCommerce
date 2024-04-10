@@ -20,6 +20,8 @@ class WC_Mondido_Admin_Actions {
 			$this,
 			'ajax_mondido_capture'
 		) );
+
+		$this->orderStorage = OrderStorage::current();
 	}
 
 	/**
@@ -30,8 +32,7 @@ class WC_Mondido_Admin_Actions {
 		global $post_id;
 		$order = wc_get_order( $post_id );
 		if ( $order && strpos( $order->get_payment_method(), 'mondido' ) !== false ) {
-			$orderStorage = OrderStorageTechnology::current();
-			$transaction = $orderStorage->get_meta( $order, '_mondido_transaction_data', TRUE );
+			$transaction = $this->orderStorage->get_meta_data( $order, '_mondido_transaction_data', TRUE );
 			if ( ! empty( $transaction ) ) {
 				$screen = class_exists( '\Automattic\WooCommerce\Internal\DataStores\Orders\CustomOrdersTableController' ) && wc_get_container()->get( CustomOrdersTableController::class )->custom_orders_table_usage_is_enabled()
 					? wc_get_page_screen_id( 'shop-order' )
@@ -57,8 +58,7 @@ class WC_Mondido_Admin_Actions {
 		global $post_id;
 		$order = ( $post_or_order_object instanceof WP_Post ) ? wc_get_order( $post_or_order_object->ID ) : $post_or_order_object;
 		
-		$orderStorage = OrderStorageTechnology::current();
-		$transaction = $orderStorage->get_meta( $order, '_mondido_transaction_data', TRUE );
+		$transaction = $this->orderStorage->get_meta_data( $order, '_mondido_transaction_data', TRUE );
 
 		wc_get_template(
 			'admin/payment-actions.php',
@@ -120,12 +120,11 @@ class WC_Mondido_Admin_Actions {
 		}
 
 		if ( $transaction['status'] === 'approved' ) {
-			$orderStorage = OrderStorageTechnology::current();
 
-			$orderStorage->update_meta_data( $order, '_transaction_id', $transaction['id'] );
-			$orderStorage->update_meta_data( $order, '_mondido_transaction_status', $transaction['status'] );
-			$orderStorage->update_meta_data( $order, '_mondido_transaction_data', $transaction );
-			$orderStorage->save( $order );
+			$this->orderStorage->update_meta_data( $order, '_transaction_id', $transaction['id'] );
+			$this->orderStorage->update_meta_data( $order, '_mondido_transaction_status', $transaction['status'] );
+			$this->orderStorage->update_meta_data( $order, '_mondido_transaction_data', $transaction );
+			$this->orderStorage->save( $order );
 
 			$order->add_order_note( sprintf( __( 'Payment captured. Transaction Id: %s', 'woocommerce-gateway-mondido' ), $transaction['id'] ) );
 			$order->payment_complete( $transaction['id'] );

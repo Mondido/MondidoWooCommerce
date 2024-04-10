@@ -5,16 +5,16 @@ if ( ! defined( 'ABSPATH' ) ) {
 
 use Automattic\WooCommerce\Utilities\OrderUtil;
 
-interface OrderStorageTechnologyFactory {
-    public function get_meta($order, $meta_key, $meta_value);
+interface OrderStorageInterface {
+    public function get_meta_data($order, $meta_key, $meta_value);
     public function add_meta_data($order, $meta_key, $meta_value);
     public function update_meta_data($order, $meta_key, $meta_value);
     public function delete_meta_data($order, $meta_key);
     public function save($order);
 }
 
-class HPOSOrderStorage implements OrderStorageTechnologyFactory {
-    public function get_meta($order, $meta_key, $meta_value) {
+class HPOSOrderStorage implements OrderStorageInterface {
+    public function get_meta_data($order, $meta_key, $meta_value) {
         return $order->get_meta($meta_key, $meta_value);
     }
 
@@ -35,8 +35,8 @@ class HPOSOrderStorage implements OrderStorageTechnologyFactory {
     }
 }
 
-class CPTOrderStorage implements OrderStorageTechnologyFactory {
-    public function get_meta($order, $meta_key, $meta_value) {
+class CPTOrderStorage implements OrderStorageInterface {
+    public function get_meta_data($order, $meta_key, $meta_value) {
         return get_post_meta($order->get_id(), $meta_key, $meta_value);
     }
 
@@ -57,7 +57,7 @@ class CPTOrderStorage implements OrderStorageTechnologyFactory {
     }
 }
 
-class OrderStorageTechnology {
+class OrderStorage {
     public static function current() {
         if (OrderUtil::custom_orders_table_usage_is_enabled()) {
             return new HPOSOrderStorage();

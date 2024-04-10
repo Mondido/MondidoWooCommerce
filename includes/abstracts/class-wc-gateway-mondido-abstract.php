@@ -15,7 +15,7 @@ abstract class WC_Gateway_Mondido_Abstract extends WC_Payment_Gateway {
 	public function add_dependencies(WC_Mondido_Api $api, WC_Mondido_Transaction $transaction) {
 		$this->api = $api;
 		$this->transaction = $transaction;
-		$this->orderStorage = OrderStorageTechnology::current();
+		$this->orderStorage = OrderStorage::current();
 	}
 
 	/**
@@ -335,7 +335,7 @@ abstract class WC_Gateway_Mondido_Abstract extends WC_Payment_Gateway {
 
 		// Check transaction was processed
 		$current_transaction_id = $order->get_transaction_id();
-		$current_status = $this->orderStorage->get_meta( $order, '_mondido_transaction_status', true );
+		$current_status = $this->orderStorage->get_meta_data( $order, '_mondido_transaction_status', true );
 
 		if ( $current_transaction_id === $transaction_id && $current_status === $status ) {
 			throw new \Exception( "Transaction already applied. Order ID: {$order_id}. Transaction ID: {$transaction_id}. Transaction status: {$status}" );
@@ -394,13 +394,12 @@ abstract class WC_Gateway_Mondido_Abstract extends WC_Payment_Gateway {
                 'postcode'   => $details['zip'],
                 'country'    => $this->get_country_alpha2( $details['country_code'] ),
             );
+			$this->orderStorage->update_meta_data( $order, '_mondido_invoice_address', $address );
+			$this->orderStorage->save( $order );
 		}
 
-		$this->orderStorage->update_meta_data( $order, '_mondido_invoice_address', $address );
-		$this->orderStorage->save( $order );
-
         // Define address for Mondido Checkout
-        if ( (bool) $this->orderStorage->get_meta( $order, '_mondido_checkout', TRUE ) ) {
+        if ( (bool) $this->orderStorage->get_meta_data( $order, '_mondido_checkout', TRUE ) ) {
             $order->set_address( $address, 'billing' );
 
             if ( $order->needs_shipping_address() ) {
@@ -564,7 +563,7 @@ abstract class WC_Gateway_Mondido_Abstract extends WC_Payment_Gateway {
 
 	public function get_payment_method_name($value, $order, $default_value)
 	{
-		$transaction = $this->orderStorage->get_meta( $order, '_mondido_transaction_data', TRUE );
+		$transaction = $this->orderStorage->get_meta_data( $order, '_mondido_transaction_data', TRUE );
 
 		if (!$transaction) {
 			if ($order->get_transaction_id()) {

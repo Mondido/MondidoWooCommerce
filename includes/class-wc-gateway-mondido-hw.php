@@ -17,7 +17,7 @@ class WC_Gateway_Mondido_HW extends WC_Gateway_Mondido_Abstract {
 		$this->has_fields         = true;
 		$this->method_title       = __( 'Mondido', 'woocommerce-gateway-mondido' );
 		$this->method_description = '';
-		$this->orderStorage	   	  = OrderStorageTechnology::current();
+		$this->orderStorage	   	  = OrderStorage::current();
 
 		$this->icon     = apply_filters( 'woocommerce_mondido_hw_icon', plugins_url( '/assets/images/mondido.png', dirname( __FILE__ ) ) );
 		$this->supports = array(
@@ -242,7 +242,7 @@ class WC_Gateway_Mondido_HW extends WC_Gateway_Mondido_Abstract {
 			$token_id = isset( $_POST[$token_key] ) ? wc_clean( $_POST['token_key'] ) : 'new';
 
 			$this->orderStorage->delete_meta_data($order, '_mondido_use_store_card');
-			$order->delete_meta_data($order, '_mondido_store_card');
+			$this->orderStorage->delete_meta_data($order, '_mondido_store_card');
 			$this->orderStorage->save( $order );
 
 			// Try to load saved token
@@ -269,7 +269,7 @@ class WC_Gateway_Mondido_HW extends WC_Gateway_Mondido_Abstract {
 		}
 
 		$transaction_id = $order->get_transaction_id();
-		$store_card = (bool) $this->orderStorage->get_meta($order, '_mondido_store_card', true);
+		$store_card = (bool) $this->orderStorage->get_meta_data($order, '_mondido_store_card', true);
 
 		if ($transaction_id) {
 			$transaction = $this->transaction->get($transaction_id);
