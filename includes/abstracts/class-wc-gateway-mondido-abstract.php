@@ -396,7 +396,7 @@ abstract class WC_Gateway_Mondido_Abstract extends WC_Payment_Gateway {
             );
             $this->orderStorage->update_meta_data( $order, '_mondido_invoice_address', $address );
             $this->orderStorage->save( $order );
-		}
+        }
 
         // Define address for Mondido Checkout
         if ( (bool) $this->orderStorage->get_meta_data( $order, '_mondido_checkout', TRUE ) ) {
