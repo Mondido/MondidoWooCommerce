@@ -3,6 +3,11 @@ if ( ! defined( 'ABSPATH' ) ) {
 	exit;
 } // Exit if accessed directly
 
+
+if ( ! function_exists( 'WC' ) || version_compare( WC()->version, '8.2', '<' ) ) {
+    exit;
+} // Exit if WooCommerce is not activated or version is less than 8.2
+
 use Automattic\WooCommerce\Utilities\OrderUtil;
 
 abstract class OrderStorage {
