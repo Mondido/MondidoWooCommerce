@@ -6,6 +6,7 @@ if ( ! defined( 'ABSPATH' ) ) {
 class WC_Gateway_Mondido_HW extends WC_Gateway_Mondido_Abstract {
 
     protected $preselected_method = null;
+	protected $orderStorage;
 
 	/**
 	 * Init
@@ -16,6 +17,7 @@ class WC_Gateway_Mondido_HW extends WC_Gateway_Mondido_Abstract {
 		$this->has_fields         = true;
 		$this->method_title       = __( 'Mondido', 'woocommerce-gateway-mondido' );
 		$this->method_description = '';
+		$this->orderStorage	   	  = OrderStorage::current();
 
 		$this->icon     = apply_filters( 'woocommerce_mondido_hw_icon', plugins_url( '/assets/images/mondido.png', dirname( __FILE__ ) ) );
 		$this->supports = array(
@@ -239,8 +241,9 @@ class WC_Gateway_Mondido_HW extends WC_Gateway_Mondido_Abstract {
 
 			$token_id = isset( $_POST[$token_key] ) ? wc_clean( $_POST['token_key'] ) : 'new';
 
-			delete_post_meta( $order_id, '_mondido_use_store_card');
-			delete_post_meta( $order_id, '_mondido_store_card');
+			$this->orderStorage->delete_meta_data($order, '_mondido_use_store_card');
+			$this->orderStorage->delete_meta_data($order, '_mondido_store_card');
+			$this->orderStorage->save( $order );
 
 			// Try to load saved token
 			if ( $token_id !== 'new' ) {
@@ -257,15 +260,16 @@ class WC_Gateway_Mondido_HW extends WC_Gateway_Mondido_Abstract {
 
 					return false;
 				}
-
-				update_post_meta( $order_id, '_mondido_use_store_card', $token->get_id() );
+				$this->orderStorage->update_meta_data($order, '_mondido_use_store_card', $token->get_id());
+				$this->orderStorage->save( $order );
 			} elseif ( isset( $_POST[$new_card_key] ) && $_POST[$new_card_key] === 'true' ) {
-				update_post_meta( $order_id, '_mondido_store_card', 1 );
+				$this->orderStorage->update_meta_data($order, '_mondido_store_card', 1);
+				$this->orderStorage->save( $order );
 			}
 		}
 
 		$transaction_id = $order->get_transaction_id();
-		$store_card = (bool) get_post_meta($order_id, '_mondido_store_card', true);
+		$store_card = (bool) $this->orderStorage->get_meta_data($order, '_mondido_store_card', true);
 
 		if ($transaction_id) {
 			$transaction = $this->transaction->get($transaction_id);
@@ -299,7 +303,8 @@ class WC_Gateway_Mondido_HW extends WC_Gateway_Mondido_Abstract {
 			);
 
 			if (!is_wp_error($transaction)) {
-				update_post_meta( $order_id, '_transaction_id', $transaction->id );
+				$this->orderStorage->update_meta_data($order, '_transaction_id', $transaction->id);
+				$this->orderStorage->save( $order );
 			}
 
 		}
@@ -442,7 +447,7 @@ class WC_Gateway_Mondido_HW extends WC_Gateway_Mondido_Abstract {
 				if ( count( $tokens ) > 0 ) {
 					$message = 'This Credit Card already stored: ' . $card_number;
 					header( sprintf( '%s %s %s', 'HTTP/1.1', '200', 'OK' ), TRUE, '200' );
-					$this->logger->notice( $this->id, sprintf( '[%s] IPN: %s', 'SUCCESS', $message ) );
+					$this->logger->notice( $this->id, array('status' => '[SUCCESS] IPN', 'message' => $message));
 					echo sprintf( 'IPN: %s', $message );
 				}
 
@@ -468,19 +473,19 @@ class WC_Gateway_Mondido_HW extends WC_Gateway_Mondido_Abstract {
 				// Success
 				$message = 'Stored Credit Card: ' . $card_number;
 				header( sprintf( '%s %s %s', 'HTTP/1.1', '200', 'OK' ), TRUE, '200' );
-				$this->logger->notice( $this->id, sprintf( '[%s] IPN: %s', 'SUCCESS', $message ) );
+				$this->logger->notice($this->id, array('status' => '[SUCCESS] IPN', 'message' => $message));
 				echo sprintf( 'IPN: %s', $message );
 				return;
 			}
 
-			$this->logger->notice( $this->id, var_export($data, true) );
+			$this->logger->notice( $this->id, array( 'data' => $data) );
 
 			if ( empty( $data['id'] ) ) {
 				throw new \Exception( 'Invalid transaction ID' );
 			}
 
 			// Log transaction details
-			$this->logger->notice( $this->id, 'Incoming Transaction: ' . var_export( json_encode( $data, true ), true) );
+			$this->logger->notice( $this->id, array('message' => 'Incoming Transaction', 'data' => $data) );
 
 			// Wait for unlock
 			$times = 0;
@@ -523,11 +528,12 @@ class WC_Gateway_Mondido_HW extends WC_Gateway_Mondido_Abstract {
 						'total'         => $transaction_data['amount'],
 						'created_via'   => 'mondido',
 					) );
-					add_post_meta( $order->get_id(), '_payment_method', $this->id );
-					update_post_meta( $order->get_id(), '_transaction_id', $transaction_data['id'] );
-					update_post_meta( $order->get_id(), '_mondido_transaction_status', $transaction_data['status'] );
-					update_post_meta( $order->get_id(), '_mondido_transaction_data', $transaction_data );
-					update_post_meta( $order->get_id(), '_mondido_subscription_id', $transaction_data['subscription']['id'] );
+
+					$this->orderStorage->add_meta_data($order, '_payment_method', $this->id);
+					$this->orderStorage->update_meta_data($order, '_transaction_id', $transaction_data['id']);
+					$this->orderStorage->update_meta_data($order, '_mondido_transaction_status', $transaction_data['status']);
+					$this->orderStorage->update_meta_data($order, '_mondido_transaction_data', $transaction_data);
+					$this->orderStorage->update_meta_data($order, '_mondido_subscription_id', $transaction_data['subscription']['id']);
 
 					// Add address
 					$order->set_address( $transaction_data['metadata']['customer'], 'billing' );
@@ -630,7 +636,7 @@ class WC_Gateway_Mondido_HW extends WC_Gateway_Mondido_Abstract {
 
 		// Success
 		header( sprintf( '%s %s %s', 'HTTP/1.1', '200', 'OK' ), TRUE, '200' );
-		$this->logger->notice( $this->id, sprintf( '[%s] IPN: %s', 'SUCCESS', $message ) );
+		$this->logger->notice($this->id, array('status' => '[SUCCESS] IPN', 'message' => $message));
 		echo sprintf( 'IPN: %s', $message );
 		exit();
 	}

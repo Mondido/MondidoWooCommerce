@@ -4,6 +4,8 @@ if ( ! defined( 'ABSPATH' ) ) {
 	exit;
 } // Exit if accessed directly
 
+// FILE SHOULD BE DELETED AFTER UPGRADE OF WOOCOMMERCE 8.7
+
 /**
  * Compatibility Layer for WC_Order on WooCommerce < 3.0
  * @see https://woocommerce.wordpress.com/2017/04/04/say-hello-to-woocommerce-3-0-bionic-butterfly/
