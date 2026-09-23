@@ -134,7 +134,7 @@ class WC_Mondido_Api {
 				'uri' => $uri,
 				'method' => $method,
 				'query' => $query,
-				'body' => $body,
+				'body' => $this->redact_sensitive_data($body),
 			],
 			'response' => $response_log,
 			'error' => [
@@ -144,5 +144,24 @@ class WC_Mondido_Api {
 		]);
 
 		return $error;
+	}
+
+	private function redact_sensitive_data($data) {
+		if (!is_array($data)) {
+			return $data;
+		}
+
+		foreach ($data as $key => $value) {
+			if (strtolower($key) === 'ssn') {
+				$data[$key] = '[redacted]';
+				continue;
+			}
+
+			if (is_array($value)) {
+				$data[$key] = $this->redact_sensitive_data($value);
+			}
+		}
+
+		return $data;
 	}
 }

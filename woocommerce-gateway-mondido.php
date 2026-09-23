@@ -41,6 +41,8 @@ class WC_Mondido_Payments {
 			'woocommerce_loaded'
 		) );
 		add_action( 'wp_enqueue_scripts', array( $this, 'add_scripts' ) );
+		add_filter( 'woocommerce_checkout_fields', array( $this, 'add_ssn_checkout_field' ) );
+		add_action( 'woocommerce_checkout_update_order_meta', array( $this, 'save_ssn_checkout_field' ) );
 
 		// Add Marketing script
 		add_action( 'wp_footer', __CLASS__ . '::marketing_script' );
@@ -73,6 +75,28 @@ class WC_Mondido_Payments {
 		);
 
 		return array_merge( $plugin_links, $links );
+	}
+
+	public function add_ssn_checkout_field( $fields ) {
+		$fields['billing']['billing_ssn'] = array(
+			'type'        => 'text',
+			'label'       => __( 'SSN', 'woocommerce-gateway-mondido' ),
+			'required'    => true,
+			'class'       => array( 'form-row-wide' ),
+			'priority'    => 115,
+		);
+
+		return $fields;
+	}
+
+	public function save_ssn_checkout_field( $order_id ) {
+		if ( isset( $_POST['billing_ssn'] ) ) {
+			update_post_meta(
+				$order_id,
+				'_billing_ssn',
+				wc_clean( wp_unslash( $_POST['billing_ssn'] ) )
+			);
+		}
 	}
 
 	/**
