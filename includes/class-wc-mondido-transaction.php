@@ -217,17 +217,18 @@ class WC_Mondido_Transaction {
 		}
 		return [
 			'user_id' => $order->get_user_id(),
+			'email' => $order->get_billing_email(),
 			'firstname' => $order->get_billing_first_name(),
 			'lastname' => $order->get_billing_last_name(),
+			'company_name' => $order->get_billing_company(),
 			'address1' => $order->get_billing_address_1(),
 			'address2' => $order->get_billing_address_2(),
-			'postcode' => $order->get_billing_postcode(),
-			'phone' => $order->get_billing_phone(),
 			'city' => $order->get_billing_city(),
 			'country' => $order_country,
 			'state' => $order->get_billing_state(),
-			'email' => $order->get_billing_email(),
-			'company_name' => $order->get_billing_company(),
+			'postcode' => $order->get_billing_postcode(),
+			'phone' => $order->get_billing_phone(),
+			'ssn' => get_post_meta( $order->get_id(), '_billing_ssn', true ),
 		];
 	}
 
@@ -243,6 +244,7 @@ class WC_Mondido_Transaction {
 			'city' => $customer_data['city'],
 			'country_code' => $customer_data['country'],
 			'company_name' => $customer_data['company_name'],
+			'ssn' => $customer_data['ssn'],
 		];
 	}
 

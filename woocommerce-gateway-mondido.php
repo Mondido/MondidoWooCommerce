@@ -5,7 +5,7 @@
  * Description: Provides a Payment Gateway through Mondido for WooCommerce.
  * Author: Mondido
  * Author URI: https://www.mondido.com/
- * Version: 4.6.4
+ * Version: 4.6.5
  * Text Domain: woocommerce-gateway-mondido
  * Domain Path: /languages
  * WC requires at least: 3.0.0
@@ -41,6 +41,9 @@ class WC_Mondido_Payments {
 			'woocommerce_loaded'
 		) );
 		add_action( 'wp_enqueue_scripts', array( $this, 'add_scripts' ) );
+		add_filter( 'woocommerce_checkout_fields', array( $this, 'add_ssn_checkout_field' ) );
+		add_action( 'woocommerce_after_checkout_validation', array( $this, 'validate_ssn_checkout_field' ), 10, 2 );
+		add_action( 'woocommerce_checkout_update_order_meta', array( $this, 'save_ssn_checkout_field' ) );
 
 		// Add Marketing script
 		add_action( 'wp_footer', __CLASS__ . '::marketing_script' );
@@ -73,6 +76,43 @@ class WC_Mondido_Payments {
 		);
 
 		return array_merge( $plugin_links, $links );
+	}
+
+	public function add_ssn_checkout_field( $fields ) {
+		$fields['billing']['billing_ssn'] = array(
+			'type'        => 'text',
+			'label'       => __( 'SSN', 'woocommerce-gateway-mondido' ),
+			'required'    => false,
+			'class'       => array( 'form-row-wide' ),
+			'priority'    => 115,
+		);
+
+		return $fields;
+	}
+
+	public function validate_ssn_checkout_field( $data, $errors ) {
+		if ( empty( $data['payment_method'] ) || 'mondido_bank' !== $data['payment_method'] ) {
+			return;
+		}
+
+		$ssn = isset( $data['billing_ssn'] ) ? trim( (string) $data['billing_ssn'] ) : '';
+
+		if ( '' === $ssn ) {
+			$errors->add(
+				'billing_ssn_required',
+				__( 'SSN is required when paying with Mondido Direct Bank.', 'woocommerce-gateway-mondido' )
+			);
+		}
+	}
+
+	public function save_ssn_checkout_field( $order_id ) {
+		if ( isset( $_POST['billing_ssn'] ) ) {
+			update_post_meta(
+				$order_id,
+				'_billing_ssn',
+				wc_clean( wp_unslash( $_POST['billing_ssn'] ) )
+			);
+		}
 	}
 
 	/**
@@ -144,6 +184,16 @@ CREATE TABLE IF NOT EXISTS `{$wpdb->prefix}mondido_customers` (
 	 */
 	public function add_scripts() {
 		wp_enqueue_style( 'wc-gateway-mondido', plugins_url( '/assets/css/style.css', __FILE__ ), array(), FALSE, 'all' );
+
+		if ( is_checkout() && ! is_order_received_page() ) {
+			wp_enqueue_script(
+				'wc-gateway-mondido-checkout',
+				plugins_url( '/assets/js/checkout.js', __FILE__ ),
+				array( 'jquery' ),
+				FALSE,
+				true
+			);
+		}
 	}
 
 	/**
