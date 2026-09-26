@@ -1,0 +1,40 @@
+{
+    "name": "mondido/woocommerce-gateway-mondido",
+    "description": "WooCommerce payment gateway plugin for Mondido Payments",
+    "type": "wordpress-plugin",
+    "keywords": [
+        "woocommerce",
+        "payment-gateway",
+        "mondido",
+        "payments",
+        "cards",
+        "invoice",
+        "paypal",
+        "swish",
+        "banking"
+    ],
+    "homepage": "https://www.mondido.com/",
+    "license": "GPL-3.0-or-later",
+    "authors": [
+        {
+            "name": "Mondido",
+            "homepage": "https://www.mondido.com/"
+        }
+    ],
+    "require": {
+        "php": ">=7.2",
+        "composer/installers": "^2.0"
+    },
+    "require-dev": {
+        "wp-coding-standards/wpcs": "^3.0",
+        "phpcompatibility/php-compatibility": "^9.0"
+    },
+    "suggest": {
+        "woocommerce/woocommerce": ">=3.0.0",
+        "woocommerce/subscriptions": "Recommended for subscription features"
+    },
+    "support": {
+        "issues": "https://github.com/Mondido/MondidoWooCommerce/issues",
+        "wiki": "https://github.com/Mondido/WooCommerce/wiki"
+    }
+}
